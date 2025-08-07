@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<!--
+Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+Click nbfs://nbhost/SystemFileSystem/Templates/Other/html.html to edit this template
+-->
+<html>
+    <head>
+        <title>Twitch Eventhub login</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <h1 id="title"></h1>
+        <p id="message"></p>
+        <form id="access-token-form" action="/oauth_token" method="post" style="display: none;">
+            <input type="text" id="access-token-field" name="access_token"><br>
+            <input type="submit" value="submit">
+        </form>
+        <script>
+            window.onload = function() {
+                // Title and message
+                const title = document.getElementById("title");
+                const message = document.getElementById("message");
+            
+                // Parse URL
+                const url = new URL(window.location);
+            
+                // Try to find error
+                const error = url.searchParams.get("error");
+                const errorDescription = url.searchParams.get("error_description");
+                
+                // Found error
+                if (error && errorDescription) {
+                    title.innerHTML = "Error during login";
+                    message.innerHTML = `Error: ${error}; Description: ${errorDescription}`;
+                    
+                    return;
+                }
+                
+                // Try to get access token
+                const tokenRegex = window.location.hash.match(/access_token=([a-zA-Z0-9]+)/);
+                
+                // Token not found
+                if (tokenRegex == null) {
+                    title.innerHTML = "Error during login";
+                    message.innerHTML = "Access token was not found in the request";
+                    
+                    return;
+                }
+                
+                // Get token
+                const accessToken = tokenRegex[1];
+                
+                // Fill and submit token form to save token
+                document.getElementById("access-token-field").value = accessToken;
+                document.getElementById("access-token-form").submit();
+            };
+        </script>
+    </body>
+</html>
