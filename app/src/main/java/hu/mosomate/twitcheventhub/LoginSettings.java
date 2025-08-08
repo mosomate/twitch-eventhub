@@ -9,12 +9,13 @@ import hu.mosomate.twitcheventhub.utils.TwitchUser;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
- *
+ * This class holds and manages all the necessary data for login and the
+ * Twitch account.
+ * 
  * @author mosomate
  */
 public class LoginSettings {
@@ -30,23 +31,20 @@ public class LoginSettings {
     public static volatile String accessToken;
     public static volatile TwitchUser loggedInUser;
     
+    /**
+     * Gets the file on the storage to save and load data.
+     * 
+     * @return the file for this configuration
+     */
     private static File getFile() {
-        // Get current working directory
-        var currentDir = new File(System.getProperty("user.dir"));
-
-        // Create "data" directory
-        var dataDir = new File(currentDir, "data");
-
-        if (!dataDir.exists()) {
-            dataDir.mkdir();
-        }
-        
-        // data file
-        return new File(dataDir, DATA_FILE_NAME);
+        return new File(FileHelper.getDataDir(), DATA_FILE_NAME);
     }
 
+    /**
+     * Loads the persisted data from the storage.
+     */
     public static void loadData() {
-        // Data file
+        // Get data file
         var dataFile = getFile();
         
         // No file, no parsing
@@ -54,6 +52,7 @@ public class LoginSettings {
             return;
         }
         
+        // Try to parse file
         try {
             var dataJson = new JSONObject(FileHelper.readFromFile(dataFile));
             
@@ -95,6 +94,9 @@ public class LoginSettings {
         }
     }
     
+    /**
+     * Saves the configuration to the storage.
+     */
     public static void persistData() {
         try {
             var persistJson = new JSONObject();
@@ -106,9 +108,7 @@ public class LoginSettings {
             
             // OAuth scopes
             if (scopes != null) {
-                var scopesArray = new JSONArray();
-                scopesArray.put(scopes);
-                persistJson.put(KEY_SCOPES, scopesArray);
+                persistJson.put(KEY_SCOPES, scopes);
             }
             
             // Access token
@@ -122,7 +122,7 @@ public class LoginSettings {
             }
             
             
-            // Data file
+            // Get data file
             var dataFile = getFile();
             
             // Write config to file

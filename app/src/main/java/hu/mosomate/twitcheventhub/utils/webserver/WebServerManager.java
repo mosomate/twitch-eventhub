@@ -6,19 +6,16 @@ package hu.mosomate.twitcheventhub.utils.webserver;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.SimpleFileServer;
+import hu.mosomate.twitcheventhub.utils.FileHelper;
+import hu.mosomate.twitcheventhub.utils.HttpHelper;
 import hu.mosomate.twitcheventhub.utils.oauth.OAuthLoginListener;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
- *
+ * Manages the web server for OAuth redirect and static content serving.
+ * 
  * @author mosomate
  */
 public class WebServerManager {
@@ -26,23 +23,25 @@ public class WebServerManager {
     private HttpServer server;
     private OAuthLoginListener oAuthLoginListener;
     
-    public void startWebServer(int port) {
+    public void startWebServer() {
+        // Don't start again
         if (isWebServerRunning()) {
             return;
         }
         
-        // Start with new port
+        // Try to start
         try {
-            server = HttpServer.create(new InetSocketAddress(port), 0);
+            // Create new web server
+            server = HttpServer.create(new InetSocketAddress(8082), 0);
             
             // Handler for access token
             server.createContext("/oauth_token", (HttpExchange he) -> {
                 // Get params from request
-                var postParams = parseParameters(he);
+                var postParams = HttpHelper.parsePostBody(he);
                 
                 // Check for access token
                 if (!postParams.containsKey("access_token")) {
-                    respondSimpleError(he, 400, "Missing token!");
+                    HttpHelper.respondSimpleMessage(he, 400, "Missing token!");
                     return;
                 }
                 
@@ -55,17 +54,20 @@ public class WebServerManager {
                 }
                 
                 // Respond success
-                respondHtmlResourceFile(he, "oauth_token.html");
+                HttpHelper.respondHtmlResourceFile(he, "oauth_token.html");
             });
             
             // Handler for OAuth redirection
             server.createContext("/oauth", (HttpExchange he) -> {
-                respondHtmlResourceFile(he, "oauth.html");
+                HttpHelper.respondHtmlResourceFile(he, "oauth.html");
             });
+            
+            // Handler for files
+            server.createContext("/html", SimpleFileServer.createFileHandler(FileHelper.getHtmlDir().toPath()));
 
             // Handler for index page
             server.createContext("/", (HttpExchange he) -> {
-                respondHtmlResourceFile(he, "index.html");
+                HttpHelper.respondHtmlResourceFile(he, "index.html");
             });
             
             // Start server
@@ -90,75 +92,7 @@ public class WebServerManager {
         return server != null;
     }
 
-    public void setoAuthLoginListener(OAuthLoginListener oAuthLoginListener) {
+    public void setOAuthLoginListener(OAuthLoginListener oAuthLoginListener) {
         this.oAuthLoginListener = oAuthLoginListener;
-    }
-    
-    public static void respondHtmlResourceFile(HttpExchange exchange, String resName) throws IOException {
-        // The path to the resource inside the JAR.
-        // A leading '/' is crucial here to start from the classpath root.
-        var resourcePath = "/" + resName;
-
-        // Get the InputStream for the HTML file.
-        // The ClassLoader will find it inside the JAR.
-        try (var inputStream = WebServerManager.class.getResourceAsStream(resourcePath)) {
-
-            // Check if the resource was found
-            if (inputStream == null) {
-                respondSimpleError(exchange, 404, "404 (Not Found)");
-                
-                return;
-            }
-
-            // Set the Content-Type header to tell the browser it's HTML
-            exchange.getResponseHeaders().set("Content-Type", "text/html");
-
-            // Read all bytes from the InputStream
-            var htmlBytes = inputStream.readAllBytes();
-            
-            // Send the HTTP response headers with a 200 OK status
-            exchange.sendResponseHeaders(200, htmlBytes.length);
-
-            // Write the HTML content to the response body
-            try (var outputStream = exchange.getResponseBody()) {
-                outputStream.write(htmlBytes);
-            }
-        }
-    }
-    
-    private static void respondSimpleError(HttpExchange he, int status, String message) throws IOException {
-        he.sendResponseHeaders(status, message.length());
-
-        // Write body
-        try (var os = he.getResponseBody()) {
-            os.write(message.getBytes());
-        }
-    }
-    
-    public static Map<String, String> parseParameters(HttpExchange exchange) throws IOException {
-        Map<String, String> parameters = new HashMap<>();
-
-        if ("POST".equalsIgnoreCase(exchange.getRequestMethod())) {
-            // Get the input stream from the request body
-            InputStreamReader isr = new InputStreamReader(exchange.getRequestBody(), "utf-8");
-            BufferedReader br = new BufferedReader(isr);
-
-            // Read the data from the stream
-            String query = br.readLine();
-
-            if (query != null && !query.isEmpty()) {
-                // Parse the URL-encoded string
-                String[] pairs = query.split("&");
-                for (String pair : pairs) {
-                    int idx = pair.indexOf("=");
-                    if (idx > 0) {
-                        String key = pair.substring(0, idx);
-                        String value = pair.substring(idx + 1);
-                        parameters.put(key, value);
-                    }
-                }
-            }
-        }
-        return parameters;
     }
 }

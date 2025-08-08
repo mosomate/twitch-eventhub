@@ -8,10 +8,12 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
- *
+ * Simple data class to hold the necessary info about a Twitch user.
+ * 
  * @author mosomate
  */
 public class TwitchUser {
+    
     private final String login;
     private final String displayName;
 

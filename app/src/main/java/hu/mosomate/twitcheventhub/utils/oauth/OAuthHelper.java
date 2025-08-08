@@ -10,14 +10,28 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 
 /**
- *
+ * Some OAuth related helper functions.
+ * 
  * @author mosomate
  */
 public class OAuthHelper {
     
-    public static void initLogin(String applicationId, String[] scopes, OAuthLoginListener listener) {
+    /**
+     * Opens up a browser for OAuth authorization.
+     * 
+     * @param applicationId application ID or client ID as Twitch calls it
+     * @param scopes OAuth scopes
+     * @return true if the browser was opened up with the auth URL
+     */
+    public static boolean initLogin(String applicationId, Collection<String> scopes) {
+        // Desktoping is not supported
+        if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            return false;
+        } 
+
         // Base auth url
         var authorizationUrl = AppConstants.TWITCH_AUTH_ENDPOINT;
         
@@ -36,15 +50,6 @@ public class OAuthHelper {
         // Add scopes
         authorizationUrl += "&scope=" + URLEncoder.encode(String.join(" ", scopes), StandardCharsets.UTF_8);
         
-        // Desktoping is not supported
-        if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-            if (listener != null) {
-                listener.onOAuthLoginError(new Exception("desktop_not_supported"));
-            }
-            
-            return;
-        } 
-        
         // Open auth URL
         try {
             // Get the Desktop instance
@@ -52,11 +57,13 @@ public class OAuthHelper {
 
             // Open the URL in the default browser
             desktop.browse(URI.create(authorizationUrl));
+            
+            return true;
         }
         catch (IOException ex) {
-            if (listener != null) {
-                listener.onOAuthLoginError(ex);
-            }
+            ex.printStackTrace();
         }
+        
+        return false;
     }
 }

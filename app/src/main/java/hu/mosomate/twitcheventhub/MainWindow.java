@@ -5,7 +5,7 @@
 package hu.mosomate.twitcheventhub;
 
 import com.formdev.flatlaf.FlatDarkLaf;
-import com.sun.net.httpserver.HttpServer;
+import hu.mosomate.twitcheventhub.utils.SwingHelper;
 import hu.mosomate.twitcheventhub.utils.TwitchApiHelper;
 import hu.mosomate.twitcheventhub.utils.TwitchUser;
 import hu.mosomate.twitcheventhub.utils.eventsub.EventSubManager;
@@ -15,7 +15,7 @@ import hu.mosomate.twitcheventhub.utils.oauth.OAuthLoginListener;
 import hu.mosomate.twitcheventhub.utils.webserver.WebServerManager;
 import java.awt.Color;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Arrays;
 import javax.swing.DefaultListModel;
 import javax.swing.JOptionPane;
 import org.json.JSONObject;
@@ -28,7 +28,9 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(MainWindow.class.getName());
     
-    // Most common default event names
+    /**
+     * Default event names. These cover most of the basic events.
+     */
     private static final String[] defaultEventNames = new String[] {
         "channel.bits.use",
         "channel.channel_points_automatic_reward_redemption.add",
@@ -39,16 +41,24 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         "channel.follow"
     };
     
-    // Required scopes for the default events
+    /**
+     * Required OAuth scopes for the default events.
+     */
     private static final String[] defaultOAuthScopes = new String[] {
         "bits:read",
         "channel:read:redemptions",
-        "user:read:chat",
-        "moderator:read:followers"
+        "moderator:read:followers",
+        "user:read:chat"
     };
     
+    /**
+     * Manages the WebSocket connection and subscription to EvenSub service.
+     */
     private final EventSubManager eventSubManager = new EventSubManager();
     
+    /**
+     * Manages the web server needed for login process.
+     */
     private final WebServerManager webServerManager = new WebServerManager();
 
     /**
@@ -57,12 +67,16 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     public MainWindow() {
         initComponents();
         
-        // Set default state for views
-        setDefaultStateForViews();
+        // Init views
+        initLoginSettingsViews();
+        initEventSubSettingsViews();
+        
+        // Update UI to initial state
+        updateLoginSettingsLayout();
         
         // Start web server
-        webServerManager.setoAuthLoginListener(this);
-        webServerManager.startWebServer(8082);
+        webServerManager.setOAuthLoginListener(this);
+        webServerManager.startWebServer();
     }
 
     /**
@@ -246,11 +260,26 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         scopesTitle.setText("Scopes");
 
         scopeList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        scopeList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+            public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
+                scopeListValueChanged(evt);
+            }
+        });
         scopeListScrollPane.setViewportView(scopeList);
 
         removeScopeButton.setText("Remove scope");
+        removeScopeButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                removeScopeButtonActionPerformed(evt);
+            }
+        });
 
         setDefaultScopesButton.setText("Set defaults");
+        setDefaultScopesButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                setDefaultScopesButtonActionPerformed(evt);
+            }
+        });
 
         accountTitle.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
         accountTitle.setText("Current account");
@@ -265,13 +294,30 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             }
         });
 
+        addScopeField.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                addScopeFieldKeyTyped(evt);
+            }
+        });
+
         addScopeButton.setText("Add");
+        addScopeButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                addScopeButtonActionPerformed(evt);
+            }
+        });
 
         addScopeTitle.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
         addScopeTitle.setText("Add scope");
 
         applicationIdTitle.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
         applicationIdTitle.setText("Application ID");
+
+        applicationIdField.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                applicationIdFieldKeyTyped(evt);
+            }
+        });
 
         javax.swing.GroupLayout loginPanelLayout = new javax.swing.GroupLayout(loginPanel);
         loginPanel.setLayout(loginPanelLayout);
@@ -342,7 +388,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
                 .addComponent(loginPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(twitchConnectionPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(312, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -358,8 +404,9 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     }// </editor-fold>//GEN-END:initComponents
 
     private void eventListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_eventListValueChanged
-        // Enable remove button if there's selection
-        if (eventList.getSelectedValue() != null) {
+        // Enable remove button if there's selection and at least 2 items
+        // are in the list
+        if (eventList.getSelectedValue() != null && eventList.getModel().getSize() > 1) {
             removeEventButton.setEnabled(true);
         }
     }//GEN-LAST:event_eventListValueChanged
@@ -401,19 +448,8 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             return;
         }
         
-        // Get a list of current event names
-        var currentEvents = new ArrayList<String>();
-        
-        // Get model from list
-        var eventListModel = (DefaultListModel) eventList.getModel();
-        
-        // Get current event names
-        for (var i = 0; i < eventListModel.getSize(); i++) {
-            currentEvents.add(eventListModel.getElementAt(i).toString());
-        }
-        
         // Check if new event is already added
-        if (currentEvents.contains(newEventName)) {
+        if (!SwingHelper.safeAddToJList(eventList, newEventName)) {
             // Notify user
             JOptionPane.showMessageDialog(
                 MainWindow.this,
@@ -423,20 +459,6 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             );
             
             return;
-        }
-        
-        // Add new event name
-        currentEvents.add(newEventName);
-        
-        // Sort list
-        currentEvents.sort(Comparator.naturalOrder());
-        
-        // Clear elements from list model
-        eventListModel.removeAllElements();
-        
-        // Add sorted elements again
-        for (var event : currentEvents) {
-            eventListModel.addElement(event);
         }
         
         // Clear input field and disable "Add" button again
@@ -467,7 +489,36 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     }//GEN-LAST:event_connectDisconnectButtonActionPerformed
 
     private void loginLogoutButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loginLogoutButtonActionPerformed
-        OAuthHelper.initLogin(applicationIdField.getText().trim(), defaultOAuthScopes, this);
+        // Has logged-in user, log out
+        if (LoginSettings.loggedInUser != null) {
+            // Clear data
+            LoginSettings.accessToken = null;
+            LoginSettings.loggedInUser = null;
+            
+            // Save configuration
+            LoginSettings.persistData();
+            
+            // Update UI
+            updateLoginSettingsLayout();
+        }
+        else {
+            // Get application ID
+            var applicationId = applicationIdField.getText().trim();
+            
+            // Get scopes from the list
+            var scopes = SwingHelper.getItemsFromJList(scopeList);
+            
+            // Init login process
+            if (!OAuthHelper.initLogin(applicationId, scopes)) {
+                // Notify user if the browser cannot be opened
+                JOptionPane.showMessageDialog(
+                    MainWindow.this,
+                    "Login failed. Check if you have a web browser installed!",
+                    "Login error",
+                    JOptionPane.ERROR_MESSAGE
+                );
+            }
+        }
     }//GEN-LAST:event_loginLogoutButtonActionPerformed
 
     private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
@@ -476,10 +527,63 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         
         // Disconnect EvetSub
         eventSubManager.close();
-        
-        // Persist config data
-        LoginSettings.persistData();
     }//GEN-LAST:event_formWindowClosing
+
+    private void scopeListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_scopeListValueChanged
+        updateLoginSettingsLayout();
+    }//GEN-LAST:event_scopeListValueChanged
+
+    private void removeScopeButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeScopeButtonActionPerformed
+        // Get currently selected item index
+        var scopeIndex = scopeList.getSelectedIndex();
+        
+        // Remove from model
+        ((DefaultListModel) scopeList.getModel()).remove(scopeIndex);
+        
+        // Update UI
+        updateLoginSettingsLayout();
+    }//GEN-LAST:event_removeScopeButtonActionPerformed
+
+    private void setDefaultScopesButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_setDefaultScopesButtonActionPerformed
+        SwingHelper.setItemsForJList(scopeList, Arrays.asList(defaultOAuthScopes));
+    }//GEN-LAST:event_setDefaultScopesButtonActionPerformed
+
+    private void addScopeFieldKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_addScopeFieldKeyTyped
+        updateLoginSettingsLayout();
+    }//GEN-LAST:event_addScopeFieldKeyTyped
+
+    private void addScopeButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addScopeButtonActionPerformed
+        // Get new scope's name
+        var newScopeName = addScopeField.getText().trim();
+        
+        // Abort if blank
+        if (newScopeName.isBlank()) {
+            return;
+        }
+        
+        // Add new scope to list if not contained already
+        if (!SwingHelper.safeAddToJList(scopeList, newScopeName)) {
+            // Notify user
+            JOptionPane.showMessageDialog(
+                MainWindow.this,
+                newScopeName + " is already added!",
+                "Already added",
+                JOptionPane.WARNING_MESSAGE
+            );
+            
+            return;
+        }
+        
+        // Clear input field
+        addScopeField.setText("");
+        
+        // Update UI
+        updateLoginSettingsLayout();
+    }//GEN-LAST:event_addScopeButtonActionPerformed
+
+    private void applicationIdFieldKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_applicationIdFieldKeyTyped
+        updateLoginSettingsLayout();
+    }//GEN-LAST:event_applicationIdFieldKeyTyped
 
     /**
      * @param args the command line arguments
@@ -510,38 +614,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         java.awt.EventQueue.invokeLater(() -> new MainWindow().setVisible(true));
     }
     
-    private void setDefaultStateForViews() {
-        
-        ////////  Account settings panel  ////////
-        
-        // Application ID
-        if (LoginSettings.applicationId != null) {
-            applicationIdField.setText(LoginSettings.applicationId);
-        }
-        
-        // Set up scope list model
-        var scopeListModel = new DefaultListModel();
-        
-        for (var defaultScope : defaultOAuthScopes) {
-            scopeListModel.addElement(defaultScope);
-        }
-        
-        scopeList.setModel(scopeListModel);
-        
-        // Set scope list remove button
-        removeScopeButton.setEnabled(false);
-        
-        // Clear new scope field, and disable "Add" button
-        addScopeField.setText("");
-        addScopeButton.setEnabled(false);
-        
-        // Set logged in user
-        if (LoginSettings.loggedInUser != null) {
-            setAccountLayout(LoginSettings.loggedInUser);
-        }
-        
-        ////////  EventSub settings panel  ////////
-        
+    private void initEventSubSettingsViews() {
         // Set window for EventSubManager
         eventSubManager.setMessageListener(this);
 
@@ -565,6 +638,107 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         addEventButton.setEnabled(false);
     }
     
+    private void initLoginSettingsViews() {
+        
+        // ---- Application ID field ----- //
+        
+        if (LoginSettings.applicationId != null) {
+            applicationIdField.setText(LoginSettings.applicationId);
+        }
+        
+        // ---- Scope list ----- //
+        
+        // New model for list
+        var scopeListModel = new DefaultListModel();
+        
+        // Add persisted scopes
+        if (LoginSettings.scopes != null && !LoginSettings.scopes.isEmpty()) {
+            for (var persistedScope : LoginSettings.scopes) {
+                scopeListModel.addElement(persistedScope);
+            }
+        }
+        // Add default scopes
+        else {
+            for (var defaultScope : defaultOAuthScopes) {
+                scopeListModel.addElement(defaultScope);
+            }
+        }
+        
+        // Set model for list
+        scopeList.setModel(scopeListModel);
+    }
+    
+    private void updateLoginSettingsLayout() {
+        // Get necessary data
+        var loggedInUser = LoginSettings.loggedInUser;
+        var applicationIdFieldText = applicationIdField.getText().trim();
+        var scopeListItems = SwingHelper.getItemsFromJList(scopeList);
+        var scopeListSelectedValue = scopeList.getSelectedValue();
+        var addScopeFieldText = addScopeField.getText().trim();
+
+        // ----- Application ID field ----- //
+        
+        applicationIdField.setEnabled(loggedInUser == null);
+        
+        // ----- Scope list layout ----- //
+        
+        // Enable list if there's no logged-in user
+        scopeList.setEnabled(loggedInUser == null);
+        
+        // Clear list selection if the list is disabled
+        if (!scopeList.isEnabled()) {
+            scopeList.clearSelection();
+        }
+        
+        // Enable remove button if:
+        // 1. the list is enabled
+        // 2. it has a selected item
+        // 3. it has at least 2 items
+        removeScopeButton.setEnabled(scopeList.isEnabled() &&
+                scopeListSelectedValue != null &&
+                scopeListItems.size() > 1
+        );
+        
+        // Enable defaults button if the list is enabled
+        setDefaultScopesButton.setEnabled(scopeList.isEnabled());
+        
+        // ----- Add scope layout ----- //
+        
+        // Clear add field if the list is disabled
+        if (!scopeList.isEnabled()) {
+            addScopeField.setText("");
+        }
+        
+        // Enable add field if the list is enabled
+        addScopeField.setEnabled(scopeList.isEnabled());
+        
+        // Enable add button if the add field is enabled and the it's not empty
+        addScopeButton.setEnabled(addScopeField.isEnabled() && !addScopeFieldText.isBlank());
+        
+        // ----- Account layout ----- //
+        
+        // No user
+        if (loggedInUser == null) {
+            // Status label to red
+            accountStatusLabel.setForeground(new java.awt.Color(255, 102, 102));
+            accountStatusLabel.setText("No account");
+            
+            // Button to login and enable if application ID is filled out and
+            // at least one scope is defined
+            loginLogoutButton.setText("Login");
+            loginLogoutButton.setEnabled(!applicationIdFieldText.isBlank() && !scopeListItems.isEmpty());
+        }
+        // Has user
+        else {
+            // Status label to green
+            accountStatusLabel.setForeground(new java.awt.Color(102, 255, 102));
+            accountStatusLabel.setText(loggedInUser.getDisplayName());
+            
+            // Button to logout
+            loginLogoutButton.setText("Logout");
+        }
+    }
+    
     private void setEventSubSettingsEnabled(boolean enabled) {
         channelIdField.setEnabled(enabled);
         eventList.setEnabled(enabled);
@@ -577,13 +751,6 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             addEventField.setText("");
             addEventButton.setEnabled(false);
         }
-    }
-    
-    private void setAccountLayout(TwitchUser user) {
-        // Set UI to logout
-        accountStatusLabel.setForeground(new java.awt.Color(102, 255, 102));
-        accountStatusLabel.setText(user.getDisplayName());
-        loginLogoutButton.setText("Logout");
     }
 
     @Override
@@ -626,41 +793,40 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     }
 
     @Override
-    public void onEventSubMessage(JSONObject message) {
-        
-    }
-
-    @Override
-    public void onOAuthLoginError(Throwable ex) {
-        // Notify user
-        JOptionPane.showMessageDialog(
-            MainWindow.this,
-            "An error occurred during login.\n\nError:\n" + ex.getMessage(),
-            "Login error",
-            JOptionPane.ERROR_MESSAGE
-        );
+    public void onEventSubMessage(JSONObject message) {   
     }
 
     @Override
     public void onOAuthLoginSuccess(String accessToken) {
-        // Set config settings
-        LoginSettings.accessToken = accessToken;
-        LoginSettings.applicationId = applicationIdField.getText().trim();
+        // Get application ID
+        var applicationId = applicationIdField.getText().trim();
 
-        // Query logged-in user data
-        TwitchApiHelper.getLoggedInUser(LoginSettings.applicationId, accessToken, new TwitchApiHelper.GetLoggedInUserResponse() {
+        // Query logged-in user's data
+        TwitchApiHelper.getLoggedInUser(applicationId, accessToken, new TwitchApiHelper.GetLoggedInUserResponse() {
             @Override
             public void onError(String message) {
-                System.out.println(message);
+                // Notify user
+                JOptionPane.showMessageDialog(
+                    MainWindow.this,
+                    "An error occurred during user request.\n\nError:\n" + message,
+                    "User request error",
+                    JOptionPane.ERROR_MESSAGE
+                );
             }
 
             @Override
             public void onSuccess(TwitchUser user) {
-                // Persist user
+                // Set config
+                LoginSettings.accessToken = accessToken;
+                LoginSettings.applicationId = applicationId;
+                LoginSettings.scopes = SwingHelper.getItemsFromJList(scopeList);
                 LoginSettings.loggedInUser = user;
                 
-                // Set UI
-                setAccountLayout(user);
+                // Save config
+                LoginSettings.persistData();
+                
+                // Update UI
+                updateLoginSettingsLayout();
             }
         });
     }

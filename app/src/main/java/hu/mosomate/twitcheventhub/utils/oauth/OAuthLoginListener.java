@@ -5,10 +5,10 @@
 package hu.mosomate.twitcheventhub.utils.oauth;
 
 /**
- *
+ * To be called after a successful OAuth authorization.
+ * 
  * @author mosomate
  */
 public interface OAuthLoginListener {
-    void onOAuthLoginError(Throwable ex);
     void onOAuthLoginSuccess(String accessToken);
 }

@@ -8,18 +8,25 @@ import hu.mosomate.twitcheventhub.AppConstants;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import javax.swing.SwingWorker;
 import org.json.JSONObject;
 
 /**
- *
+ * Some Twitch API related helper functions.
+ * 
  * @author mosomate
  */
 public class TwitchApiHelper {
     
+    /**
+     * Gets the user for the given access token. This function is blocking.
+     * 
+     * @param applicationId application ID or client ID as Twitch calls it
+     * @param accessToken access token from the login process
+     * @return if the request was successful a {@link TwitchUser}, the error message otherwise
+     * @throws Exception 
+     */
     public static Object requestTokenUser(String applicationId, String accessToken) throws Exception {
         // Init URL and connection
         var url = new URI(AppConstants.TWITCH_USERS_ENDPOINT).toURL();
@@ -36,11 +43,13 @@ public class TwitchApiHelper {
         // Open connection by getting response code
         connection.getResponseCode();
 
-        // Read response
+        // Buffer for the response
         var response = new StringBuffer();
         
-        try (java.io.BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
-            var inputLine = "";
+        // Read response
+        try (var in = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+            String inputLine;
+            
             while ((inputLine = in.readLine()) != null) {
                 response.append(inputLine);
             }
@@ -61,7 +70,14 @@ public class TwitchApiHelper {
         return TwitchUser.fromJson(userJson);
     }
     
-    public static void getLoggedInUser(String applicationId, String accessToken, GetLoggedInUserResponse response) {
+    /**
+     * Gets the user for the given access token asynchronously.
+     * 
+     * @param applicationId application ID or client ID as Twitch calls it
+     * @param accessToken access token from the login process
+     * @param callback to be called when the request is done
+     */
+    public static void getLoggedInUser(String applicationId, String accessToken, GetLoggedInUserResponse callback) {
         var worker = new SwingWorker<Object, Void>() {
             @Override
             protected Object doInBackground() throws Exception {
@@ -70,7 +86,8 @@ public class TwitchApiHelper {
 
             @Override
             protected void done() {
-                if (response == null) {
+                // No callback, nothing to do with the result
+                if (callback == null) {
                     return;
                 }
                 
@@ -78,20 +95,21 @@ public class TwitchApiHelper {
                 try {
                     var responseObject = get();
                     
-                    // User
+                    // Unknow error
                     if (responseObject == null) {
-                        response.onError("Response object is null");
+                        callback.onError("Response object is null");
                     }
+                    // User returned
                     else if (responseObject instanceof TwitchUser twitchUser) {
-                        response.onSuccess(twitchUser);
+                        callback.onSuccess(twitchUser);
                     }
-                    // Error
+                    // Known error
                     else {
-                        response.onError(responseObject.toString());
+                        callback.onError(responseObject.toString());
                     }
                 }
                 catch (Exception ex) {
-                    response.onError(ex.getMessage());
+                    callback.onError(ex.getMessage());
                 }
             }
         };

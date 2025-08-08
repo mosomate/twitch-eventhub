@@ -5,7 +5,8 @@
 package hu.mosomate.twitcheventhub;
 
 /**
- *
+ * App-wide contants.
+ * 
  * @author mosomate
  */
 public class AppConstants {
