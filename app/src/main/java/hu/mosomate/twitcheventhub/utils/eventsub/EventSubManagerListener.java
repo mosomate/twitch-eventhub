@@ -11,7 +11,8 @@ import org.json.JSONObject;
  * @author mosomate
  */
 public interface EventSubManagerListener {
-    void onEventSubManagerConnecting();
+    void onEventSubError(String message);
+    void onEventSubManagerConnecting(int step, Object... params);
     void onEventSubManagerConnected();
     void onEventSubManagerDisconnected();
     void onEventSubMessage(JSONObject message);

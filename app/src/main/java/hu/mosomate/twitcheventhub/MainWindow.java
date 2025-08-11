@@ -5,6 +5,8 @@
 package hu.mosomate.twitcheventhub;
 
 import com.formdev.flatlaf.FlatDarkLaf;
+import hu.mosomate.twitcheventhub.ui.AddEventPanel;
+import hu.mosomate.twitcheventhub.ui.AddScopePanel;
 import hu.mosomate.twitcheventhub.utils.SwingHelper;
 import hu.mosomate.twitcheventhub.utils.TwitchApiHelper;
 import hu.mosomate.twitcheventhub.utils.TwitchUser;
@@ -14,9 +16,8 @@ import hu.mosomate.twitcheventhub.utils.oauth.OAuthHelper;
 import hu.mosomate.twitcheventhub.utils.oauth.OAuthLoginListener;
 import hu.mosomate.twitcheventhub.utils.webserver.WebServerManager;
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.Arrays;
 import javax.swing.DefaultListModel;
+import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import org.json.JSONObject;
 
@@ -27,29 +28,6 @@ import org.json.JSONObject;
 public class MainWindow extends javax.swing.JFrame implements EventSubManagerListener, OAuthLoginListener {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(MainWindow.class.getName());
-    
-    /**
-     * Default event names. These cover most of the basic events.
-     */
-    private static final String[] defaultEventNames = new String[] {
-        "channel.bits.use",
-        "channel.channel_points_automatic_reward_redemption.add",
-        "channel.channel_points_custom_reward_redemption.add",
-        "channel.chat.message",
-        "channel.chat.notification",
-        "channel.cheer",
-        "channel.follow"
-    };
-    
-    /**
-     * Required OAuth scopes for the default events.
-     */
-    private static final String[] defaultOAuthScopes = new String[] {
-        "bits:read",
-        "channel:read:redemptions",
-        "moderator:read:followers",
-        "user:read:chat"
-    };
     
     /**
      * Manages the WebSocket connection and subscription to EvenSub service.
@@ -73,10 +51,14 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         
         // Update UI to initial state
         updateLoginSettingsLayout();
+        updateEventSubSettingsLayout();
         
         // Start web server
         webServerManager.setOAuthLoginListener(this);
         webServerManager.startWebServer();
+        
+        // Set window for EventSubManager
+        eventSubManager.setMessageListener(this);
     }
 
     /**
@@ -89,33 +71,29 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     private void initComponents() {
 
         twitchConnectionPanel = new javax.swing.JPanel();
-        channelIdTitle = new javax.swing.JLabel();
-        channelIdField = new javax.swing.JTextField();
-        eventListTitle = new javax.swing.JLabel();
+        eventsubConnectionPanel = new javax.swing.JPanel();
+        eventsubConnectionStatusTitle = new javax.swing.JLabel();
+        eventsubConnectionStatusLabel = new javax.swing.JLabel();
+        eventsubConnectButton = new javax.swing.JButton();
+        eventListPanel = new javax.swing.JPanel();
+        eventRemoveButton = new javax.swing.JButton();
+        eventAddButton = new javax.swing.JButton();
         eventListScrollPane = new javax.swing.JScrollPane();
         eventList = new javax.swing.JList<>();
-        removeEventButton = new javax.swing.JButton();
-        addEventTitle = new javax.swing.JLabel();
-        addEventField = new javax.swing.JTextField();
-        addEventButton = new javax.swing.JButton();
-        connectionStatusTitle = new javax.swing.JLabel();
-        connectionStatusLabel = new javax.swing.JLabel();
-        connectDisconnectButton = new javax.swing.JButton();
-        setDefaultEventsButton = new javax.swing.JButton();
-        setDefaultTwitchIdButton = new javax.swing.JButton();
+        eventListTitle = new javax.swing.JLabel();
         loginPanel = new javax.swing.JPanel();
-        scopesTitle = new javax.swing.JLabel();
-        scopeListScrollPane = new javax.swing.JScrollPane();
-        scopeList = new javax.swing.JList<>();
-        removeScopeButton = new javax.swing.JButton();
-        setDefaultScopesButton = new javax.swing.JButton();
-        accountTitle = new javax.swing.JLabel();
+        accountPanel = new javax.swing.JPanel();
+        accountPanelLabel = new javax.swing.JLabel();
         accountStatusLabel = new javax.swing.JLabel();
         loginLogoutButton = new javax.swing.JButton();
-        addScopeField = new javax.swing.JTextField();
-        addScopeButton = new javax.swing.JButton();
-        addScopeTitle = new javax.swing.JLabel();
-        applicationIdTitle = new javax.swing.JLabel();
+        scopeListPanel = new javax.swing.JPanel();
+        scopeListPanelLabel = new javax.swing.JLabel();
+        scopeListScrollPane = new javax.swing.JScrollPane();
+        scopeList = new javax.swing.JList<>();
+        scopeListRemoveButton = new javax.swing.JButton();
+        scopeListAddButton = new javax.swing.JButton();
+        applicationIdPanel = new javax.swing.JPanel();
+        applicationIdPanelLabel = new javax.swing.JLabel();
         applicationIdField = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -129,12 +107,56 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         twitchConnectionPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("EventSub settings"));
         twitchConnectionPanel.setToolTipText("");
         twitchConnectionPanel.setName(""); // NOI18N
+        twitchConnectionPanel.setPreferredSize(new java.awt.Dimension(280, 35));
 
-        channelIdTitle.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
-        channelIdTitle.setText("Channel ID");
+        eventsubConnectionStatusTitle.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
+        eventsubConnectionStatusTitle.setText("Connection status");
 
-        eventListTitle.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
-        eventListTitle.setText("Events");
+        eventsubConnectionStatusLabel.setForeground(new java.awt.Color(255, 102, 102));
+        eventsubConnectionStatusLabel.setText("Disconnected");
+
+        eventsubConnectButton.setText("Connect");
+        eventsubConnectButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                eventsubConnectButtonActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout eventsubConnectionPanelLayout = new javax.swing.GroupLayout(eventsubConnectionPanel);
+        eventsubConnectionPanel.setLayout(eventsubConnectionPanelLayout);
+        eventsubConnectionPanelLayout.setHorizontalGroup(
+            eventsubConnectionPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(eventsubConnectionPanelLayout.createSequentialGroup()
+                .addComponent(eventsubConnectionStatusTitle)
+                .addGap(0, 0, Short.MAX_VALUE))
+            .addGroup(eventsubConnectionPanelLayout.createSequentialGroup()
+                .addComponent(eventsubConnectionStatusLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(eventsubConnectButton))
+        );
+        eventsubConnectionPanelLayout.setVerticalGroup(
+            eventsubConnectionPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(eventsubConnectionPanelLayout.createSequentialGroup()
+                .addComponent(eventsubConnectionStatusTitle)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(eventsubConnectionPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(eventsubConnectionStatusLabel)
+                    .addComponent(eventsubConnectButton)))
+        );
+
+        eventRemoveButton.setText("Remove");
+        eventRemoveButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                eventRemoveButtonActionPerformed(evt);
+            }
+        });
+
+        eventAddButton.setText("Add");
+        eventAddButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                eventAddButtonActionPerformed(evt);
+            }
+        });
 
         eventList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         eventList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
@@ -144,50 +166,34 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         });
         eventListScrollPane.setViewportView(eventList);
 
-        removeEventButton.setText("Remove event");
-        removeEventButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                removeEventButtonActionPerformed(evt);
-            }
-        });
+        eventListTitle.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
+        eventListTitle.setText("Events");
 
-        addEventTitle.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
-        addEventTitle.setText("Add event");
-
-        addEventField.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyTyped(java.awt.event.KeyEvent evt) {
-                addEventFieldKeyTyped(evt);
-            }
-        });
-
-        addEventButton.setText("Add");
-        addEventButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                addEventButtonActionPerformed(evt);
-            }
-        });
-
-        connectionStatusTitle.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
-        connectionStatusTitle.setText("Connection status");
-
-        connectionStatusLabel.setForeground(new java.awt.Color(255, 102, 102));
-        connectionStatusLabel.setText("Disconnected");
-
-        connectDisconnectButton.setText("Connect");
-        connectDisconnectButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                connectDisconnectButtonActionPerformed(evt);
-            }
-        });
-
-        setDefaultEventsButton.setText("Set defaults");
-        setDefaultEventsButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                setDefaultEventsButtonActionPerformed(evt);
-            }
-        });
-
-        setDefaultTwitchIdButton.setText("Default");
+        javax.swing.GroupLayout eventListPanelLayout = new javax.swing.GroupLayout(eventListPanel);
+        eventListPanel.setLayout(eventListPanelLayout);
+        eventListPanelLayout.setHorizontalGroup(
+            eventListPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, eventListPanelLayout.createSequentialGroup()
+                .addGap(0, 0, Short.MAX_VALUE)
+                .addComponent(eventAddButton)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(eventRemoveButton))
+            .addGroup(eventListPanelLayout.createSequentialGroup()
+                .addComponent(eventListTitle)
+                .addGap(0, 0, Short.MAX_VALUE))
+            .addComponent(eventListScrollPane)
+        );
+        eventListPanelLayout.setVerticalGroup(
+            eventListPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, eventListPanelLayout.createSequentialGroup()
+                .addComponent(eventListTitle)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(eventListScrollPane)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(eventListPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(eventRemoveButton)
+                    .addComponent(eventAddButton)))
+        );
 
         javax.swing.GroupLayout twitchConnectionPanelLayout = new javax.swing.GroupLayout(twitchConnectionPanel);
         twitchConnectionPanel.setLayout(twitchConnectionPanelLayout);
@@ -196,93 +202,24 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             .addGroup(twitchConnectionPanelLayout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(twitchConnectionPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(eventListScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 278, Short.MAX_VALUE)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, twitchConnectionPanelLayout.createSequentialGroup()
-                        .addComponent(addEventField)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(addEventButton))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, twitchConnectionPanelLayout.createSequentialGroup()
-                        .addComponent(connectionStatusLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(connectDisconnectButton))
-                    .addGroup(twitchConnectionPanelLayout.createSequentialGroup()
-                        .addGroup(twitchConnectionPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(channelIdTitle)
-                            .addComponent(eventListTitle)
-                            .addComponent(addEventTitle)
-                            .addComponent(connectionStatusTitle)
-                            .addGroup(twitchConnectionPanelLayout.createSequentialGroup()
-                                .addComponent(removeEventButton)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(setDefaultEventsButton)))
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addGroup(twitchConnectionPanelLayout.createSequentialGroup()
-                        .addComponent(channelIdField)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(setDefaultTwitchIdButton)))
+                    .addComponent(eventsubConnectionPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(eventListPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
         twitchConnectionPanelLayout.setVerticalGroup(
             twitchConnectionPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(twitchConnectionPanelLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(channelIdTitle)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(twitchConnectionPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(channelIdField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(setDefaultTwitchIdButton))
+                .addComponent(eventListPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGap(18, 18, 18)
-                .addComponent(eventListTitle)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(eventListScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 215, Short.MAX_VALUE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(twitchConnectionPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(removeEventButton)
-                    .addComponent(setDefaultEventsButton))
-                .addGap(18, 18, 18)
-                .addComponent(addEventTitle)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(twitchConnectionPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(addEventField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(addEventButton))
-                .addGap(18, 18, 18)
-                .addComponent(connectionStatusTitle)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(twitchConnectionPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(connectDisconnectButton)
-                    .addComponent(connectionStatusLabel))
+                .addComponent(eventsubConnectionPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
         loginPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Login settings"));
 
-        scopesTitle.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
-        scopesTitle.setText("Scopes");
-
-        scopeList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        scopeList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
-            public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
-                scopeListValueChanged(evt);
-            }
-        });
-        scopeListScrollPane.setViewportView(scopeList);
-
-        removeScopeButton.setText("Remove scope");
-        removeScopeButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                removeScopeButtonActionPerformed(evt);
-            }
-        });
-
-        setDefaultScopesButton.setText("Set defaults");
-        setDefaultScopesButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                setDefaultScopesButtonActionPerformed(evt);
-            }
-        });
-
-        accountTitle.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
-        accountTitle.setText("Current account");
+        accountPanelLabel.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
+        accountPanelLabel.setText("Current account");
 
         accountStatusLabel.setForeground(new java.awt.Color(255, 102, 102));
         accountStatusLabel.setText("No account");
@@ -294,30 +231,104 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             }
         });
 
-        addScopeField.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyTyped(java.awt.event.KeyEvent evt) {
-                addScopeFieldKeyTyped(evt);
+        javax.swing.GroupLayout accountPanelLayout = new javax.swing.GroupLayout(accountPanel);
+        accountPanel.setLayout(accountPanelLayout);
+        accountPanelLayout.setHorizontalGroup(
+            accountPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(accountPanelLayout.createSequentialGroup()
+                .addComponent(accountPanelLabel)
+                .addGap(0, 0, Short.MAX_VALUE))
+            .addGroup(accountPanelLayout.createSequentialGroup()
+                .addComponent(accountStatusLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(loginLogoutButton))
+        );
+        accountPanelLayout.setVerticalGroup(
+            accountPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(accountPanelLayout.createSequentialGroup()
+                .addComponent(accountPanelLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(accountPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(accountStatusLabel)
+                    .addComponent(loginLogoutButton)))
+        );
+
+        scopeListPanelLabel.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
+        scopeListPanelLabel.setText("Scopes");
+
+        scopeList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        scopeList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+            public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
+                scopeListValueChanged(evt);
             }
         });
+        scopeListScrollPane.setViewportView(scopeList);
 
-        addScopeButton.setText("Add");
-        addScopeButton.addActionListener(new java.awt.event.ActionListener() {
+        scopeListRemoveButton.setText("Remove");
+        scopeListRemoveButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                addScopeButtonActionPerformed(evt);
+                scopeListRemoveButtonActionPerformed(evt);
             }
         });
 
-        addScopeTitle.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
-        addScopeTitle.setText("Add scope");
+        scopeListAddButton.setText("Add");
+        scopeListAddButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                scopeListAddButtonActionPerformed(evt);
+            }
+        });
 
-        applicationIdTitle.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
-        applicationIdTitle.setText("Application ID");
+        javax.swing.GroupLayout scopeListPanelLayout = new javax.swing.GroupLayout(scopeListPanel);
+        scopeListPanel.setLayout(scopeListPanelLayout);
+        scopeListPanelLayout.setHorizontalGroup(
+            scopeListPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(scopeListPanelLayout.createSequentialGroup()
+                .addComponent(scopeListPanelLabel)
+                .addGap(0, 0, Short.MAX_VALUE))
+            .addComponent(scopeListScrollPane)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, scopeListPanelLayout.createSequentialGroup()
+                .addGap(0, 0, Short.MAX_VALUE)
+                .addComponent(scopeListAddButton)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(scopeListRemoveButton))
+        );
+        scopeListPanelLayout.setVerticalGroup(
+            scopeListPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(scopeListPanelLayout.createSequentialGroup()
+                .addComponent(scopeListPanelLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(scopeListScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 183, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(scopeListPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(scopeListRemoveButton)
+                    .addComponent(scopeListAddButton)))
+        );
+
+        applicationIdPanelLabel.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
+        applicationIdPanelLabel.setText("Application ID");
 
         applicationIdField.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyTyped(java.awt.event.KeyEvent evt) {
                 applicationIdFieldKeyTyped(evt);
             }
         });
+
+        javax.swing.GroupLayout applicationIdPanelLayout = new javax.swing.GroupLayout(applicationIdPanel);
+        applicationIdPanel.setLayout(applicationIdPanelLayout);
+        applicationIdPanelLayout.setHorizontalGroup(
+            applicationIdPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(applicationIdPanelLayout.createSequentialGroup()
+                .addComponent(applicationIdPanelLabel)
+                .addGap(0, 0, Short.MAX_VALUE))
+            .addComponent(applicationIdField)
+        );
+        applicationIdPanelLayout.setVerticalGroup(
+            applicationIdPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(applicationIdPanelLayout.createSequentialGroup()
+                .addComponent(applicationIdPanelLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(applicationIdField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+        );
 
         javax.swing.GroupLayout loginPanelLayout = new javax.swing.GroupLayout(loginPanel);
         loginPanel.setLayout(loginPanelLayout);
@@ -326,56 +337,20 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             .addGroup(loginPanelLayout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(loginPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(scopeListScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 275, Short.MAX_VALUE)
-                    .addGroup(loginPanelLayout.createSequentialGroup()
-                        .addComponent(accountStatusLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(loginLogoutButton))
-                    .addGroup(loginPanelLayout.createSequentialGroup()
-                        .addComponent(addScopeField)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(addScopeButton))
-                    .addComponent(applicationIdField)
-                    .addGroup(loginPanelLayout.createSequentialGroup()
-                        .addGroup(loginPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(scopesTitle)
-                            .addComponent(accountTitle)
-                            .addComponent(addScopeTitle)
-                            .addGroup(loginPanelLayout.createSequentialGroup()
-                                .addComponent(removeScopeButton)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(setDefaultScopesButton))
-                            .addComponent(applicationIdTitle))
-                        .addGap(0, 0, Short.MAX_VALUE)))
+                    .addComponent(accountPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(applicationIdPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(scopeListPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
         loginPanelLayout.setVerticalGroup(
             loginPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(loginPanelLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(applicationIdTitle)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(applicationIdField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(applicationIdPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(scopesTitle)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(scopeListScrollPane)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(loginPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(removeScopeButton)
-                    .addComponent(setDefaultScopesButton))
+                .addComponent(scopeListPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGap(18, 18, 18)
-                .addComponent(addScopeTitle)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(loginPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(addScopeField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(addScopeButton))
-                .addGap(18, 18, 18)
-                .addComponent(accountTitle)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(loginPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(loginLogoutButton)
-                    .addComponent(accountStatusLabel))
+                .addComponent(accountPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
@@ -383,20 +358,20 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+            .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(loginPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(twitchConnectionPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addComponent(twitchConnectionPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(twitchConnectionPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(loginPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(loginPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 394, Short.MAX_VALUE)
+                    .addComponent(twitchConnectionPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 394, Short.MAX_VALUE))
                 .addContainerGap())
         );
 
@@ -404,102 +379,52 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     }// </editor-fold>//GEN-END:initComponents
 
     private void eventListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_eventListValueChanged
-        // Enable remove button if there's selection and at least 2 items
-        // are in the list
-        if (eventList.getSelectedValue() != null && eventList.getModel().getSize() > 1) {
-            removeEventButton.setEnabled(true);
-        }
+        updateEventSubSettingsLayout();
     }//GEN-LAST:event_eventListValueChanged
 
-    private void removeEventButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeEventButtonActionPerformed
+    private void eventRemoveButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_eventRemoveButtonActionPerformed
         // Get currently selected item index
         var eventIndex = eventList.getSelectedIndex();
         
         // Remove from model
         ((DefaultListModel) eventList.getModel()).remove(eventIndex);
         
-        // Disable remove button again
-        removeEventButton.setEnabled(false);
-    }//GEN-LAST:event_removeEventButtonActionPerformed
+        updateEventSubSettingsLayout();
+    }//GEN-LAST:event_eventRemoveButtonActionPerformed
 
-    private void setDefaultEventsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_setDefaultEventsButtonActionPerformed
-        var eventListModel = (DefaultListModel) eventList.getModel();
-
-        // Remove all elements from model
-        eventListModel.removeAllElements();
-        
-        // Add defaults
-        for (var event : defaultEventNames) {
-            eventListModel.addElement(event);
-        }
-    }//GEN-LAST:event_setDefaultEventsButtonActionPerformed
-
-    private void addEventFieldKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_addEventFieldKeyTyped
-        // Enable "Add" button if the input field is not empty
-        addEventButton.setEnabled(!addEventField.getText().isBlank());
-    }//GEN-LAST:event_addEventFieldKeyTyped
-
-    private void addEventButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addEventButtonActionPerformed
-        // Get new event's name
-        var newEventName = addEventField.getText().trim();
-        
-        // Abort if blank
-        if (newEventName.isBlank()) {
-            return;
-        }
-        
-        // Check if new event is already added
-        if (!SwingHelper.safeAddToJList(eventList, newEventName)) {
-            // Notify user
-            JOptionPane.showMessageDialog(
-                MainWindow.this,
-                newEventName + " is already added!",
-                "Already added",
-                JOptionPane.WARNING_MESSAGE
-            );
-            
-            return;
-        }
-        
-        // Clear input field and disable "Add" button again
-        addEventField.setText("");
-        addEventButton.setEnabled(false);
-    }//GEN-LAST:event_addEventButtonActionPerformed
-
-    private void connectDisconnectButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_connectDisconnectButtonActionPerformed
+    private void eventsubConnectButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_eventsubConnectButtonActionPerformed
         // Disconnect
         if (eventSubManager.isConnected()) {
             eventSubManager.close();
         }
         // Connect
         else {
-            // Get a list of current event names
-            var currentEvents = new ArrayList<String>();
-
-            // Get model from list
-            var eventListModel = (DefaultListModel) eventList.getModel();
-
-            // Get current event names
-            for (var i = 0; i < eventListModel.getSize(); i++) {
-                currentEvents.add(eventListModel.getElementAt(i).toString());
-            }
+            // Get a list of current event types
+            var currentEvents = SwingHelper.getItemsFromJList(eventList);
             
-            eventSubManager.connect(currentEvents);
+            // Init connection
+            eventSubManager.connect(
+                    AppSettings.applicationId,
+                    AppSettings.accessToken,
+                    AppSettings.loggedInUser.getId(),
+                    currentEvents
+            );
         }
-    }//GEN-LAST:event_connectDisconnectButtonActionPerformed
+    }//GEN-LAST:event_eventsubConnectButtonActionPerformed
 
     private void loginLogoutButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loginLogoutButtonActionPerformed
         // Has logged-in user, log out
-        if (LoginSettings.loggedInUser != null) {
+        if (AppSettings.loggedInUser != null) {
             // Clear data
-            LoginSettings.accessToken = null;
-            LoginSettings.loggedInUser = null;
+            AppSettings.accessToken = null;
+            AppSettings.loggedInUser = null;
             
             // Save configuration
-            LoginSettings.persistData();
+            AppSettings.persistData();
             
             // Update UI
             updateLoginSettingsLayout();
+            updateEventSubSettingsLayout();
         }
         else {
             // Get application ID
@@ -533,7 +458,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         updateLoginSettingsLayout();
     }//GEN-LAST:event_scopeListValueChanged
 
-    private void removeScopeButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeScopeButtonActionPerformed
+    private void scopeListRemoveButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_scopeListRemoveButtonActionPerformed
         // Get currently selected item index
         var scopeIndex = scopeList.getSelectedIndex();
         
@@ -542,48 +467,87 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         
         // Update UI
         updateLoginSettingsLayout();
-    }//GEN-LAST:event_removeScopeButtonActionPerformed
+    }//GEN-LAST:event_scopeListRemoveButtonActionPerformed
 
-    private void setDefaultScopesButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_setDefaultScopesButtonActionPerformed
-        SwingHelper.setItemsForJList(scopeList, Arrays.asList(defaultOAuthScopes));
-    }//GEN-LAST:event_setDefaultScopesButtonActionPerformed
-
-    private void addScopeFieldKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_addScopeFieldKeyTyped
-        updateLoginSettingsLayout();
-    }//GEN-LAST:event_addScopeFieldKeyTyped
-
-    private void addScopeButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addScopeButtonActionPerformed
-        // Get new scope's name
-        var newScopeName = addScopeField.getText().trim();
+    private void scopeListAddButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_scopeListAddButtonActionPerformed
+        var dialog = new JDialog();
+        dialog.setTitle("Add scope");
+        dialog.setModal(true); // This makes the dialog block the parent frame
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         
-        // Abort if blank
-        if (newScopeName.isBlank()) {
-            return;
-        }
-        
-        // Add new scope to list if not contained already
-        if (!SwingHelper.safeAddToJList(scopeList, newScopeName)) {
-            // Notify user
-            JOptionPane.showMessageDialog(
-                MainWindow.this,
-                newScopeName + " is already added!",
-                "Already added",
-                JOptionPane.WARNING_MESSAGE
-            );
+        // Add the JPanel to the JDialog
+        var panel = new AddScopePanel((Object... data) -> {
+            var newScope = (String) data[0];
             
-            return;
-        }
+            // Add new event
+            if (!SwingHelper.safeAddToJList(scopeList, newScope)) {
+                // Notify user
+                JOptionPane.showMessageDialog(
+                        MainWindow.this,
+                        newScope + " is already added!",
+                        "Already added",
+                        JOptionPane.WARNING_MESSAGE
+                );
+            }
+            
+            // Close dialog
+            dialog.setVisible(false);
+            
+            updateLoginSettingsLayout();
+        });
+        dialog.add(panel);
         
-        // Clear input field
-        addScopeField.setText("");
+        // Set the size and position
+        dialog.pack();
+        dialog.setLocationRelativeTo(this); // Center the dialog on the screen
+        dialog.setResizable(false);
+        dialog.getRootPane().setDefaultButton(panel.getPositiveButton());
         
-        // Update UI
-        updateLoginSettingsLayout();
-    }//GEN-LAST:event_addScopeButtonActionPerformed
+        // Make the dialog visible
+        dialog.setVisible(true);
+    }//GEN-LAST:event_scopeListAddButtonActionPerformed
 
     private void applicationIdFieldKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_applicationIdFieldKeyTyped
         updateLoginSettingsLayout();
     }//GEN-LAST:event_applicationIdFieldKeyTyped
+
+    private void eventAddButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_eventAddButtonActionPerformed
+        var dialog = new JDialog();
+        dialog.setTitle("Add event");
+        dialog.setModal(true); // This makes the dialog block the parent frame
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        
+        // Add the JPanel to the JDialog
+        var panel = new AddEventPanel((Object... data) -> {
+            var newEvent = (String) data[0];
+            
+            // Add new event
+            if (!SwingHelper.safeAddToJList(eventList, newEvent)) {
+                // Notify user
+                JOptionPane.showMessageDialog(
+                        MainWindow.this,
+                        newEvent + " is already added!",
+                        "Already added",
+                        JOptionPane.WARNING_MESSAGE
+                );
+            }
+            
+            // Close dialog
+            dialog.setVisible(false);
+            
+            updateEventSubSettingsLayout();
+        });
+        dialog.add(panel);
+        
+        // Set the size and position
+        dialog.pack();
+        dialog.setLocationRelativeTo(this); // Center the dialog on the screen
+        dialog.setResizable(false);
+        dialog.getRootPane().setDefaultButton(panel.getPositiveButton());
+        
+        // Make the dialog visible
+        dialog.setVisible(true);
+    }//GEN-LAST:event_eventAddButtonActionPerformed
 
     /**
      * @param args the command line arguments
@@ -608,42 +572,36 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         FlatDarkLaf.setup();
         
         // Load persisted data
-        LoginSettings.loadData();
+        AppSettings.loadData();
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(() -> new MainWindow().setVisible(true));
     }
     
     private void initEventSubSettingsViews() {
-        // Set window for EventSubManager
-        eventSubManager.setMessageListener(this);
-
-        // Set channel ID
-        channelIdField.setText("");
+        
+        // ----- Event list ----- //
         
         // Set up event list model
         var eventListModel = new DefaultListModel();
         
-        for (var defaultEvent : defaultEventNames) {
-            eventListModel.addElement(defaultEvent);
+        // Add persisted events
+        if (AppSettings.events != null && !AppSettings.events.isEmpty()) {
+            for (var persistedEvent : AppSettings.events) {
+                eventListModel.addElement(persistedEvent);
+            }
         }
         
+        // Set model for list
         eventList.setModel(eventListModel);
-        
-        // Set event list remove button
-        removeEventButton.setEnabled(false);
-        
-        // Clear new event field, and disable "Add" button
-        addEventField.setText("");
-        addEventButton.setEnabled(false);
     }
     
     private void initLoginSettingsViews() {
         
         // ---- Application ID field ----- //
         
-        if (LoginSettings.applicationId != null) {
-            applicationIdField.setText(LoginSettings.applicationId);
+        if (AppSettings.applicationId != null) {
+            applicationIdField.setText(AppSettings.applicationId);
         }
         
         // ---- Scope list ----- //
@@ -652,15 +610,9 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         var scopeListModel = new DefaultListModel();
         
         // Add persisted scopes
-        if (LoginSettings.scopes != null && !LoginSettings.scopes.isEmpty()) {
-            for (var persistedScope : LoginSettings.scopes) {
+        if (AppSettings.scopes != null && !AppSettings.scopes.isEmpty()) {
+            for (var persistedScope : AppSettings.scopes) {
                 scopeListModel.addElement(persistedScope);
-            }
-        }
-        // Add default scopes
-        else {
-            for (var defaultScope : defaultOAuthScopes) {
-                scopeListModel.addElement(defaultScope);
             }
         }
         
@@ -670,17 +622,16 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     
     private void updateLoginSettingsLayout() {
         // Get necessary data
-        var loggedInUser = LoginSettings.loggedInUser;
+        var loggedInUser = AppSettings.loggedInUser;
         var applicationIdFieldText = applicationIdField.getText().trim();
         var scopeListItems = SwingHelper.getItemsFromJList(scopeList);
         var scopeListSelectedValue = scopeList.getSelectedValue();
-        var addScopeFieldText = addScopeField.getText().trim();
 
         // ----- Application ID field ----- //
         
         applicationIdField.setEnabled(loggedInUser == null);
         
-        // ----- Scope list layout ----- //
+        // ----- Scopes layout ----- //
         
         // Enable list if there's no logged-in user
         scopeList.setEnabled(loggedInUser == null);
@@ -690,37 +641,22 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             scopeList.clearSelection();
         }
         
+        // Enable add button if the list is enabled
+        scopeListAddButton.setEnabled(scopeList.isEnabled());
+        
         // Enable remove button if:
         // 1. the list is enabled
         // 2. it has a selected item
-        // 3. it has at least 2 items
-        removeScopeButton.setEnabled(scopeList.isEnabled() &&
-                scopeListSelectedValue != null &&
-                scopeListItems.size() > 1
+        scopeListRemoveButton.setEnabled(scopeList.isEnabled() &&
+                scopeListSelectedValue != null
         );
-        
-        // Enable defaults button if the list is enabled
-        setDefaultScopesButton.setEnabled(scopeList.isEnabled());
-        
-        // ----- Add scope layout ----- //
-        
-        // Clear add field if the list is disabled
-        if (!scopeList.isEnabled()) {
-            addScopeField.setText("");
-        }
-        
-        // Enable add field if the list is enabled
-        addScopeField.setEnabled(scopeList.isEnabled());
-        
-        // Enable add button if the add field is enabled and the it's not empty
-        addScopeButton.setEnabled(addScopeField.isEnabled() && !addScopeFieldText.isBlank());
         
         // ----- Account layout ----- //
         
         // No user
         if (loggedInUser == null) {
             // Status label to red
-            accountStatusLabel.setForeground(new java.awt.Color(255, 102, 102));
+            accountStatusLabel.setForeground(new Color(255, 102, 102));
             accountStatusLabel.setText("No account");
             
             // Button to login and enable if application ID is filled out and
@@ -736,64 +672,131 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             
             // Button to logout
             loginLogoutButton.setText("Logout");
+            
+            // Disable logout button if we have an active EventSub connection
+            loginLogoutButton.setEnabled(!eventSubManager.isConnected());
         }
     }
     
-    private void setEventSubSettingsEnabled(boolean enabled) {
-        channelIdField.setEnabled(enabled);
-        eventList.setEnabled(enabled);
-        setDefaultEventsButton.setEnabled(enabled);
-        addEventField.setEnabled(enabled);
+    private void updateEventSubSettingsLayout() {
+        // Get necessary data
+        var loggedInUser = AppSettings.loggedInUser;
+        var eventSubConnected = eventSubManager.isConnected();
+        var eventListItems = SwingHelper.getItemsFromJList(eventList);
+        var eventListSelectedValue = eventList.getSelectedValue();
         
-        if (!enabled) {
+        // ----- Events layout ----- //
+        
+        // Enable list if EventSub is not connected
+        eventList.setEnabled(!eventSubConnected);
+        
+        // Clear list selection if the list is disabled
+        if (!eventList.isEnabled()) {
             eventList.clearSelection();
-            removeEventButton.setEnabled(false);
-            addEventField.setText("");
-            addEventButton.setEnabled(false);
+        }
+        
+        // Enable add button if the list is enabled
+        eventAddButton.setEnabled(eventList.isEnabled());
+        
+        // Enable remove button if:
+        // 1. the list is enabled
+        // 2. it has a selected item
+        eventRemoveButton.setEnabled(eventList.isEnabled() &&
+                eventListSelectedValue != null
+        );
+        
+        // ----- Connection status layout ----- //
+        
+        // Enable connect button if:
+        // 1. the user is logged in
+        // 2. at least one event is in the list
+        eventsubConnectButton.setEnabled(loggedInUser != null &&
+                !eventListItems.isEmpty()
+        );
+        
+        // EventSub is connected
+        if (eventSubConnected) {
+            // Status label to green
+            eventsubConnectionStatusLabel.setForeground(new java.awt.Color(102, 255, 102));
+            eventsubConnectionStatusLabel.setText("Connected");
+            
+            // Button to disconnect
+            eventsubConnectButton.setText("Disconnect");
+        }
+        // EventSub is not connected
+        else {
+            // Status label to red
+            eventsubConnectionStatusLabel.setForeground(new Color(255, 102, 102));
+            eventsubConnectionStatusLabel.setText("Disconnected");
+            
+            // Button to connect
+            eventsubConnectButton.setText("Connect");
         }
     }
 
     @Override
-    public void onEventSubManagerConnecting() {
-        // Set status label
-        connectionStatusLabel.setForeground(new Color(102, 102, 255));
-        connectionStatusLabel.setText("Connecting...");
+    public void onEventSubManagerConnecting(int step, Object... params) {
+        // Set status label to blue
+        eventsubConnectionStatusLabel.setForeground(new java.awt.Color(102, 102, 255));
         
-        // Set connection button
-        connectDisconnectButton.setText("Disconnect");
+        // Set status label text
+        var statusLabel = switch (step) {
+            case EventSubManager.CONNECTION_STEP_INITIATED -> "Connecting...";
+            case EventSubManager.CONNECTION_STEP_WEBSOCKET_CONNECTED -> "Websocket connected";
+            case EventSubManager.CONNECTION_STEP_SUBSCRIBING -> {
+                // Get freshly subbed event
+                var subbedEvent = (String) params[0];
+                
+                // Get events from the list
+                var events = SwingHelper.getItemsFromJList(eventList);
+                
+                // Get index of subbed event
+                var subbedEventIndex = events.indexOf(subbedEvent);
+                
+                // This is not possible, but better to handle it
+                if (subbedEventIndex == -1) {
+                    yield "Subscribing to events [?/" + events.size() + "]";
+                }
+                
+                yield "Subscribing to events [" + (subbedEventIndex + 1) + "/" + events.size() + "]";
+            }
+            default -> "Disconnected";
+        };
         
-        // Disable EventSub settings
-        setEventSubSettingsEnabled(false);
+        eventsubConnectionStatusLabel.setText(statusLabel);
+    }
+
+    @Override
+    public void onEventSubError(String message) {
+        // Notify user
+        JOptionPane.showMessageDialog(
+                MainWindow.this,
+                "Error during EvenSub connection! Error:\n\n" + message,
+                "EvenSub connection",
+                JOptionPane.ERROR_MESSAGE
+        );
     }
 
     @Override
     public void onEventSubManagerConnected() {
-        // Set status label
-        connectionStatusLabel.setForeground(new Color(102, 255, 102));
-        connectionStatusLabel.setText("Connected");
+        // Set events data on successful connection
+        AppSettings.events = SwingHelper.getItemsFromJList(eventList);
         
-        // Set connection button
-        connectDisconnectButton.setText("Disconnect");
+        // Persist data
+        AppSettings.persistData();
         
-        // Disable EventSub settings
-        setEventSubSettingsEnabled(false);
+        // Update UI
+        updateEventSubSettingsLayout();
     }
 
     @Override
     public void onEventSubManagerDisconnected() {
-        // Set status label
-        connectionStatusLabel.setForeground(new Color(255, 102, 102));
-        connectionStatusLabel.setText("Disconnected");
-        
-        // Set connection button
-        connectDisconnectButton.setText("Connect");
-        
-        // Enable EventSub settings
-        setEventSubSettingsEnabled(true);
+        updateEventSubSettingsLayout();
     }
 
     @Override
-    public void onEventSubMessage(JSONObject message) {   
+    public void onEventSubMessage(JSONObject message) {
+        System.out.println(message.toString());
     }
 
     @Override
@@ -802,7 +805,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         var applicationId = applicationIdField.getText().trim();
 
         // Query logged-in user's data
-        TwitchApiHelper.getLoggedInUser(applicationId, accessToken, new TwitchApiHelper.GetLoggedInUserResponse() {
+        TwitchApiHelper.getTokenUser(applicationId, accessToken, new TwitchApiHelper.TokenUserRequestListener() {
             @Override
             public void onError(String message) {
                 // Notify user
@@ -817,49 +820,46 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             @Override
             public void onSuccess(TwitchUser user) {
                 // Set config
-                LoginSettings.accessToken = accessToken;
-                LoginSettings.applicationId = applicationId;
-                LoginSettings.scopes = SwingHelper.getItemsFromJList(scopeList);
-                LoginSettings.loggedInUser = user;
+                AppSettings.accessToken = accessToken;
+                AppSettings.applicationId = applicationId;
+                AppSettings.scopes = SwingHelper.getItemsFromJList(scopeList);
+                AppSettings.loggedInUser = user;
                 
                 // Save config
-                LoginSettings.persistData();
+                AppSettings.persistData();
                 
                 // Update UI
                 updateLoginSettingsLayout();
+                updateEventSubSettingsLayout();
             }
         });
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JPanel accountPanel;
+    private javax.swing.JLabel accountPanelLabel;
     private javax.swing.JLabel accountStatusLabel;
-    private javax.swing.JLabel accountTitle;
-    private javax.swing.JButton addEventButton;
-    private javax.swing.JTextField addEventField;
-    private javax.swing.JLabel addEventTitle;
-    private javax.swing.JButton addScopeButton;
-    private javax.swing.JTextField addScopeField;
-    private javax.swing.JLabel addScopeTitle;
     private javax.swing.JTextField applicationIdField;
-    private javax.swing.JLabel applicationIdTitle;
-    private javax.swing.JTextField channelIdField;
-    private javax.swing.JLabel channelIdTitle;
-    private javax.swing.JButton connectDisconnectButton;
-    private javax.swing.JLabel connectionStatusLabel;
-    private javax.swing.JLabel connectionStatusTitle;
+    private javax.swing.JPanel applicationIdPanel;
+    private javax.swing.JLabel applicationIdPanelLabel;
+    private javax.swing.JButton eventAddButton;
     private javax.swing.JList<String> eventList;
+    private javax.swing.JPanel eventListPanel;
     private javax.swing.JScrollPane eventListScrollPane;
     private javax.swing.JLabel eventListTitle;
+    private javax.swing.JButton eventRemoveButton;
+    private javax.swing.JButton eventsubConnectButton;
+    private javax.swing.JPanel eventsubConnectionPanel;
+    private javax.swing.JLabel eventsubConnectionStatusLabel;
+    private javax.swing.JLabel eventsubConnectionStatusTitle;
     private javax.swing.JButton loginLogoutButton;
     private javax.swing.JPanel loginPanel;
-    private javax.swing.JButton removeEventButton;
-    private javax.swing.JButton removeScopeButton;
     private javax.swing.JList<String> scopeList;
+    private javax.swing.JButton scopeListAddButton;
+    private javax.swing.JPanel scopeListPanel;
+    private javax.swing.JLabel scopeListPanelLabel;
+    private javax.swing.JButton scopeListRemoveButton;
     private javax.swing.JScrollPane scopeListScrollPane;
-    private javax.swing.JLabel scopesTitle;
-    private javax.swing.JButton setDefaultEventsButton;
-    private javax.swing.JButton setDefaultScopesButton;
-    private javax.swing.JButton setDefaultTwitchIdButton;
     private javax.swing.JPanel twitchConnectionPanel;
     // End of variables declaration//GEN-END:variables
 }

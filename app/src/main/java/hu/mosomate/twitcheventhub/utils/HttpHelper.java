@@ -9,6 +9,7 @@ import hu.mosomate.twitcheventhub.utils.webserver.WebServerManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -108,5 +109,21 @@ public class HttpHelper {
         }
         
         return parameters;
+    }
+    
+    /**
+     * Decides if a HTTP status code indicates success.
+     * 
+     * @param responseCode the HTTP response code
+     * @return true if the code indicates success
+     */
+    public static boolean isResponseCodeSuccess(int responseCode) {
+        return responseCode == HttpURLConnection.HTTP_OK ||
+                responseCode == HttpURLConnection.HTTP_CREATED ||
+                responseCode == HttpURLConnection.HTTP_ACCEPTED ||
+                responseCode == HttpURLConnection.HTTP_NOT_AUTHORITATIVE ||
+                responseCode == HttpURLConnection.HTTP_NO_CONTENT ||
+                responseCode == HttpURLConnection.HTTP_RESET ||
+                responseCode == HttpURLConnection.HTTP_PARTIAL;
     }
 }

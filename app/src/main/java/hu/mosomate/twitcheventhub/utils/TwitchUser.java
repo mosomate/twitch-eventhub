@@ -14,41 +14,34 @@ import org.json.JSONObject;
  */
 public class TwitchUser {
     
-    private final String login;
+    private final String id;
     private final String displayName;
 
     public TwitchUser(String login, String displayName) {
-        this.login = login;
+        this.id = login;
         this.displayName = displayName;
     }
 
-    public String getLogin() {
-        return login;
+    public String getId() {
+        return id;
     }
 
     public String getDisplayName() {
         return displayName;
     }
     
-    public JSONObject toJson() {
-        try {
-            var json = new JSONObject();
+    public JSONObject toJson() throws JSONException {
+        var json = new JSONObject();
             
-            json.put("login", login);
-            json.put("display_name", displayName);
-            
-            return json;
-        }
-        catch (JSONException ex) {
-            ex.printStackTrace();
-        }
-        
-        return null;
+        json.put("id", id);
+        json.put("display_name", displayName);
+
+        return json;
     }
     
     public static TwitchUser fromJson(JSONObject json) throws JSONException {
         return new TwitchUser(
-                json.getString("login"),
+                json.getString("id"),
                 json.getString("display_name")
         );
     }

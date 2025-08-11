@@ -9,7 +9,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 
 /**
  * Some useful file and storage related functions.
@@ -89,5 +94,36 @@ public class FileHelper {
         }
         
         return content.toString();
+    }
+    
+    /**
+     * Reads an InputStream and converts it into a String.
+     *
+     * @param inputStream The InputStream to be read.
+     * @return The content of the InputStream as a String.
+     * @throws IOException If an I/O error occurs.
+     */
+    public static String readStreamToString(InputStream inputStream) throws IOException {
+        // We use a BufferedReader to efficiently read characters from the InputStream.
+        // InputStreamReader bridges the byte streams to character streams,
+        // and we specify StandardCharsets.UTF_8 for character encoding.
+        try (var reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+            // The Collectors.joining() method concatenates the elements of the stream into a single String.
+            // The lines() method returns a stream of lines from the reader.
+            return reader.lines().collect(Collectors.joining(System.lineSeparator()));
+        }
+    }
+    
+    /**
+     * Writes a String to an OutputStream.
+     * 
+     * @param str the string to write
+     * @param outputStream write the string to it
+     * @throws IOException 
+     */
+    public static void writeStringToStream(String str, OutputStream outputStream) throws IOException {
+        try (outputStream) {
+            outputStream.write(str.getBytes(StandardCharsets.UTF_8));
+        }
     }
 }

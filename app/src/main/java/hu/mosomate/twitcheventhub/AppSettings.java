@@ -18,18 +18,23 @@ import org.json.JSONObject;
  * 
  * @author mosomate
  */
-public class LoginSettings {
-    
-    private static final String DATA_FILE_NAME = "login_settings.json";
+public class AppSettings {
+    // Login
+    private static final String DATA_FILE_NAME = "settings.json";
     private static final String KEY_APPLICATION_ID = "application_id";
     private static final String KEY_SCOPES = "scopes";
     private static final String KEY_ACCESS_TOKEN = "access_token";
     private static final String KEY_USER = "logged_in_user";
+    // EventSub
+    private static final String KEY_EVENTS = "events";
     
+    // Login
     public static volatile String applicationId;
     public static volatile List<String> scopes;
     public static volatile String accessToken;
     public static volatile TwitchUser loggedInUser;
+    // EventSub
+    public static volatile List<String> events;
     
     /**
      * Gets the file on the storage to save and load data.
@@ -88,6 +93,19 @@ public class LoginSettings {
                     ex.printStackTrace();
                 }
             }
+            
+            // Events
+            if (dataJson.has(KEY_EVENTS)) {
+                // Get array
+                var jsonArray = dataJson.getJSONArray(KEY_EVENTS);
+                
+                // Add events
+                events = new ArrayList<>(jsonArray.length());
+                
+                for (var i = 0; i < jsonArray.length(); i++) {
+                    events.add(jsonArray.getString(i));
+                }
+            }
         }
         catch (Exception ex) {
             ex.printStackTrace();
@@ -121,6 +139,10 @@ public class LoginSettings {
                 persistJson.put(KEY_USER, loggedInUser.toJson());
             }
             
+            // Events
+            if (events != null) {
+                persistJson.put(KEY_EVENTS, events);
+            }
             
             // Get data file
             var dataFile = getFile();

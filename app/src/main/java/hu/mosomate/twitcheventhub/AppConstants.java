@@ -14,7 +14,14 @@ public class AppConstants {
     public static final String TWITCH_AUTH_ENDPOINT = "https://id.twitch.tv/oauth2/authorize";
     public static final String TWITCH_TOKEN_ENDPOINT = "https://id.twitch.tv/oauth2/token";
     public static final String TWITCH_USERS_ENDPOINT = "https://api.twitch.tv/helix/users";
+    public static final String EVENTSUB_WEBSOCKET_ENDPOINT = "wss://eventsub.wss.twitch.tv/ws";
+    public static final String EVENTSUB_SUBSCRIBE_ENDPOINT = "https://api.twitch.tv/helix/eventsub/subscriptions";
     
     // OAuth
     public static final String OAUTH_REDIRECT_URI = "http://localhost:8082/oauth";
+    
+    // Regex for input field validation
+    public static final String OAUTH_SCOPE_REGEX = "^[a-z:]+$";
+    public static final String EVENT_NAME_REGEX = "^[a-z._]+$";
+    public static final String EVENT_SUBSCRIPTION_REGEX = "^([a-z._]+) \\[(1|2|beta),([bmu]{1,3})\\]$";
 }
