@@ -24,4 +24,6 @@ public class AppConstants {
     public static final String OAUTH_SCOPE_REGEX = "^[a-z:]+$";
     public static final String EVENT_NAME_REGEX = "^[a-z._]+$";
     public static final String EVENT_SUBSCRIPTION_REGEX = "^([a-z._]+) \\[(1|2|beta),([bmu]{1,3})\\]$";
+    public static final String UDP_PORTS_LIST_REGEX = "^[0-9,]+$";
+    public static final String WEBSOCKET_PORT_REGEX = "^[0-9]+$";
 }

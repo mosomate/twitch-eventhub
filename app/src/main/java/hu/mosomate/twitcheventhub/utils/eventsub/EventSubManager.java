@@ -8,6 +8,8 @@ import hu.mosomate.twitcheventhub.AppConstants;
 import hu.mosomate.twitcheventhub.utils.TwitchApiHelper;
 import java.net.URI;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.json.JSONException;
@@ -19,6 +21,8 @@ import org.json.JSONObject;
  */
 public class EventSubManager implements TwitchApiHelper.EventSubscriptionRequestListener {
     
+    private static final Logger logger = Logger.getLogger(EventSubManager.class.getName());
+    
     public static final int CONNECTION_STEP_INITIATED = 0;
     public static final int CONNECTION_STEP_WEBSOCKET_CONNECTED = 1;
     public static final int CONNECTION_STEP_SUBSCRIBING = 2;
@@ -28,7 +32,7 @@ public class EventSubManager implements TwitchApiHelper.EventSubscriptionRequest
      * To be called whenever a EventSub related action
      * (connection, subscribing, etc..) happens.
      */
-    private EventSubManagerListener listener;
+    private final EventSubManagerListener listener;
     
     /**
      * Currently connected websocket to EventSub endpoint.
@@ -50,6 +54,10 @@ public class EventSubManager implements TwitchApiHelper.EventSubscriptionRequest
      * When a reconnect message is received, this URL is used for reconnection.
      */
     private String reconnectUrl;
+    
+    public EventSubManager(EventSubManagerListener listener) {
+        this.listener = listener;
+    }
     
     /**
      * Initiates the websocket connection and subscribing to events.
@@ -125,7 +133,7 @@ public class EventSubManager implements TwitchApiHelper.EventSubscriptionRequest
                                 case "session_keepalive":
                                 case "notification":
                                     if (listener != null) {
-                                        listener.onEventSubMessage(jsonMessage);
+                                        listener.onEventSubMessage(message);
                                     }
                                     break;
                                 case "session_reconnect":
@@ -135,7 +143,7 @@ public class EventSubManager implements TwitchApiHelper.EventSubscriptionRequest
                         }
                     }
                     catch (JSONException ex) {
-                        ex.printStackTrace();
+                        logger.log(Level.SEVERE, null, ex);
                     }
                 }
 
@@ -162,7 +170,7 @@ public class EventSubManager implements TwitchApiHelper.EventSubscriptionRequest
 
                 @Override
                 public void onError(Exception excptn) {
-                    excptn.printStackTrace();
+                    logger.log(Level.SEVERE, null, excptn);
                 }
             };
             
@@ -178,7 +186,7 @@ public class EventSubManager implements TwitchApiHelper.EventSubscriptionRequest
             }
         }
         catch (Exception ex) {
-            ex.printStackTrace();
+            logger.log(Level.SEVERE, null, ex);
             return false;
         }
         
@@ -217,10 +225,6 @@ public class EventSubManager implements TwitchApiHelper.EventSubscriptionRequest
 
     public long getLastKeepaliveMessageReceived() {
         return lastMessageReceived;
-    }
-
-    public void setMessageListener(EventSubManagerListener listener) {
-        this.listener = listener;
     }
 
     @Override

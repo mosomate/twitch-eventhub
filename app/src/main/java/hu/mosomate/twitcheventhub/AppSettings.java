@@ -9,7 +9,8 @@ import hu.mosomate.twitcheventhub.utils.TwitchUser;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import org.json.JSONException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.json.JSONObject;
 
 /**
@@ -19,6 +20,9 @@ import org.json.JSONObject;
  * @author mosomate
  */
 public class AppSettings {
+    
+    private static final Logger logger = Logger.getLogger(AppSettings.class.getName());
+
     // Login
     private static final String DATA_FILE_NAME = "settings.json";
     private static final String KEY_APPLICATION_ID = "application_id";
@@ -27,6 +31,9 @@ public class AppSettings {
     private static final String KEY_USER = "logged_in_user";
     // EventSub
     private static final String KEY_EVENTS = "events";
+    // Services
+    private static final String KEY_WS_PORT = "ws_port";
+    private static final String KEY_UDP_PORTS = "udp_ports";
     
     // Login
     public static volatile String applicationId;
@@ -35,6 +42,9 @@ public class AppSettings {
     public static volatile TwitchUser loggedInUser;
     // EventSub
     public static volatile List<String> events;
+    // Services
+    public static volatile Integer webSocketPort;
+    public static volatile List<Integer> udpPorts;
     
     /**
      * Gets the file on the storage to save and load data.
@@ -86,12 +96,7 @@ public class AppSettings {
             
             // Logged-in user
             if (dataJson.has(KEY_USER)) {
-                try {
-                    loggedInUser = TwitchUser.fromJson(dataJson.getJSONObject(KEY_USER));
-                }
-                catch (JSONException ex) {
-                    ex.printStackTrace();
-                }
+                loggedInUser = TwitchUser.fromJson(dataJson.getJSONObject(KEY_USER));
             }
             
             // Events
@@ -106,9 +111,27 @@ public class AppSettings {
                     events.add(jsonArray.getString(i));
                 }
             }
+            
+            // WebSocket port
+            if (dataJson.has(KEY_WS_PORT)) {
+                webSocketPort = dataJson.getInt(KEY_WS_PORT);
+            }
+            
+            // UDP ports
+            if (dataJson.has(KEY_UDP_PORTS)) {
+                // Get array
+                var jsonArray = dataJson.getJSONArray(KEY_UDP_PORTS);
+                
+                // Add ports
+                udpPorts = new ArrayList<>(jsonArray.length());
+                
+                for (var i = 0; i < jsonArray.length(); i++) {
+                    udpPorts.add(jsonArray.getInt(i));
+                }
+            }
         }
         catch (Exception ex) {
-            ex.printStackTrace();
+            logger.log(Level.SEVERE, null, ex);
         }
     }
     
@@ -144,6 +167,16 @@ public class AppSettings {
                 persistJson.put(KEY_EVENTS, events);
             }
             
+            // WebSocket port
+            if (webSocketPort != null) {
+                persistJson.put(KEY_WS_PORT, webSocketPort);
+            }
+            
+            // UDP ports
+            if (udpPorts != null) {
+                persistJson.put(KEY_UDP_PORTS, udpPorts);
+            }
+            
             // Get data file
             var dataFile = getFile();
             
@@ -151,7 +184,7 @@ public class AppSettings {
             FileHelper.writeToFile(persistJson.toString(), dataFile);
         }
         catch (Exception ex) {
-            ex.printStackTrace();
+            logger.log(Level.SEVERE, null, ex);
         }
     }
 }

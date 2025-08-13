@@ -14,30 +14,51 @@ import hu.mosomate.twitcheventhub.utils.eventsub.EventSubManager;
 import hu.mosomate.twitcheventhub.utils.eventsub.EventSubManagerListener;
 import hu.mosomate.twitcheventhub.utils.oauth.OAuthHelper;
 import hu.mosomate.twitcheventhub.utils.oauth.OAuthLoginListener;
-import hu.mosomate.twitcheventhub.utils.webserver.WebServerManager;
+import hu.mosomate.twitcheventhub.utils.services.UdpDispatchManager;
+import hu.mosomate.twitcheventhub.utils.services.WebServerManager;
+import hu.mosomate.twitcheventhub.utils.services.WebSocketDispatchManager;
 import java.awt.Color;
+import java.util.ArrayList;
 import javax.swing.DefaultListModel;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
-import org.json.JSONObject;
+import org.apache.commons.lang3.StringUtils;
+import org.java_websocket.WebSocket;
 
 /**
- *
+ * Main window for EventHub.
+ * 
  * @author mosomate
  */
-public class MainWindow extends javax.swing.JFrame implements EventSubManagerListener, OAuthLoginListener {
+public class MainWindow extends javax.swing.JFrame implements EventSubManagerListener, OAuthLoginListener, WebSocketDispatchManager.ActionListener, UdpDispatchManager.ActionListener {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(MainWindow.class.getName());
     
-    /**
-     * Manages the WebSocket connection and subscription to EvenSub service.
-     */
-    private final EventSubManager eventSubManager = new EventSubManager();
+    // Some color constants
+    private static final Color COLOR_TEXT_RED = new Color(255, 102, 102);
+    private static final Color COLOR_TEXT_GREEN = new Color(102, 255, 102);
+    private static final Color COLOR_TEXT_BLUE = new Color(102, 102, 255);
+    private static final Color COLOR_TEXT_WHITE = new Color(204, 204, 204);
     
     /**
-     * Manages the web server needed for login process.
+     * Manages the WebSocket connection and subscription to EvenSub service
      */
-    private final WebServerManager webServerManager = new WebServerManager();
+    private final EventSubManager eventSubManager;
+    
+    /**
+     * Manages the web server needed for login process and static content serving
+     */
+    private final WebServerManager webServerManager;
+    
+    /**
+     * Receives messages from EventSub and redistributes them to it's clients
+     */
+    private final WebSocketDispatchManager wsDispatchManager;
+    
+    /**
+     * Receives messages from EventSub and redistributes them as UDP packages
+     */
+    private final UdpDispatchManager udpDispatchManager;
 
     /**
      * Creates new form MainWindow
@@ -45,20 +66,34 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     public MainWindow() {
         initComponents();
         
+        // ----- Init services ----- //
+        
+        // Web server
+        webServerManager = new WebServerManager(this);
+        webServerManager.start();
+        
+        // EventSubManager
+        eventSubManager = new EventSubManager(this);
+        
+        // UDP dispatcher
+        udpDispatchManager = new UdpDispatchManager(this);
+        
+        // WebSocket dispatcher
+        wsDispatchManager = new WebSocketDispatchManager(this);
+        
+        // ----- Init layout ----- //
+        
         // Init views
         initLoginSettingsViews();
         initEventSubSettingsViews();
+        initWsDispatchLayout();
+        initUdpDispatchLayout();
         
         // Update UI to initial state
         updateLoginSettingsLayout();
         updateEventSubSettingsLayout();
-        
-        // Start web server
-        webServerManager.setOAuthLoginListener(this);
-        webServerManager.startWebServer();
-        
-        // Set window for EventSubManager
-        eventSubManager.setMessageListener(this);
+        updateWsDispatchLayout();
+        updateUdpDispatchLayout();
     }
 
     /**
@@ -95,6 +130,19 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         applicationIdPanel = new javax.swing.JPanel();
         applicationIdPanelLabel = new javax.swing.JLabel();
         applicationIdField = new javax.swing.JTextField();
+        dispatchSettingsPanel = new javax.swing.JPanel();
+        wssSettingsPanel = new javax.swing.JPanel();
+        wssPortLabel = new javax.swing.JLabel();
+        wsDispatchPortField = new javax.swing.JTextField();
+        wssStatusLabel = new javax.swing.JLabel();
+        wsDispatchStatusLabel = new javax.swing.JLabel();
+        wsStartStopButton = new javax.swing.JButton();
+        udpSettingsPanel = new javax.swing.JPanel();
+        jLabel2 = new javax.swing.JLabel();
+        udpPortsField = new javax.swing.JTextField();
+        jLabel3 = new javax.swing.JLabel();
+        udpStatusLabel = new javax.swing.JLabel();
+        udpStartStopButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Twitch Eventhub");
@@ -181,7 +229,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             .addGroup(eventListPanelLayout.createSequentialGroup()
                 .addComponent(eventListTitle)
                 .addGap(0, 0, Short.MAX_VALUE))
-            .addComponent(eventListScrollPane)
+            .addComponent(eventListScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 281, Short.MAX_VALUE)
         );
         eventListPanelLayout.setVerticalGroup(
             eventListPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -216,7 +264,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
                 .addContainerGap())
         );
 
-        loginPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Login settings"));
+        loginPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Account settings"));
 
         accountPanelLabel.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
         accountPanelLabel.setText("Current account");
@@ -297,7 +345,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             .addGroup(scopeListPanelLayout.createSequentialGroup()
                 .addComponent(scopeListPanelLabel)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(scopeListScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 183, Short.MAX_VALUE)
+                .addComponent(scopeListScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 229, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(scopeListPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(scopeListRemoveButton)
@@ -354,6 +402,140 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
                 .addContainerGap())
         );
 
+        wssSettingsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Web socket server settings"));
+
+        wssPortLabel.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
+        wssPortLabel.setText("Port");
+
+        wsDispatchPortField.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                wsDispatchPortFieldKeyReleased(evt);
+            }
+        });
+
+        wssStatusLabel.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
+        wssStatusLabel.setText("Status");
+
+        wsDispatchStatusLabel.setForeground(new java.awt.Color(255, 102, 102));
+        wsDispatchStatusLabel.setText("Not running");
+
+        wsStartStopButton.setText("Start");
+        wsStartStopButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                wsStartStopButtonActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout wssSettingsPanelLayout = new javax.swing.GroupLayout(wssSettingsPanel);
+        wssSettingsPanel.setLayout(wssSettingsPanelLayout);
+        wssSettingsPanelLayout.setHorizontalGroup(
+            wssSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(wssSettingsPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(wssSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(wssSettingsPanelLayout.createSequentialGroup()
+                        .addComponent(wsDispatchStatusLabel)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 62, Short.MAX_VALUE)
+                        .addComponent(wsStartStopButton))
+                    .addGroup(wssSettingsPanelLayout.createSequentialGroup()
+                        .addGroup(wssSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(wsDispatchPortField, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(wssPortLabel)
+                            .addComponent(wssStatusLabel))
+                        .addGap(0, 0, Short.MAX_VALUE)))
+                .addContainerGap())
+        );
+        wssSettingsPanelLayout.setVerticalGroup(
+            wssSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(wssSettingsPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(wssPortLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(wsDispatchPortField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(wssStatusLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(wssSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(wsDispatchStatusLabel)
+                    .addComponent(wsStartStopButton))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
+        udpSettingsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("UDP sender settings"));
+
+        jLabel2.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
+        jLabel2.setText("Ports");
+
+        udpPortsField.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                udpPortsFieldKeyReleased(evt);
+            }
+        });
+
+        jLabel3.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
+        jLabel3.setText("Status");
+
+        udpStatusLabel.setForeground(new java.awt.Color(255, 102, 102));
+        udpStatusLabel.setText("Not running");
+
+        udpStartStopButton.setText("Start");
+        udpStartStopButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                udpStartStopButtonActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout udpSettingsPanelLayout = new javax.swing.GroupLayout(udpSettingsPanel);
+        udpSettingsPanel.setLayout(udpSettingsPanelLayout);
+        udpSettingsPanelLayout.setHorizontalGroup(
+            udpSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(udpSettingsPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(udpSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(udpPortsField)
+                    .addGroup(udpSettingsPanelLayout.createSequentialGroup()
+                        .addGroup(udpSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel2)
+                            .addComponent(jLabel3))
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(udpSettingsPanelLayout.createSequentialGroup()
+                        .addComponent(udpStatusLabel)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(udpStartStopButton)))
+                .addContainerGap())
+        );
+        udpSettingsPanelLayout.setVerticalGroup(
+            udpSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(udpSettingsPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel2)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(udpPortsField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jLabel3)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(udpSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(udpStatusLabel)
+                    .addComponent(udpStartStopButton))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout dispatchSettingsPanelLayout = new javax.swing.GroupLayout(dispatchSettingsPanel);
+        dispatchSettingsPanel.setLayout(dispatchSettingsPanelLayout);
+        dispatchSettingsPanelLayout.setHorizontalGroup(
+            dispatchSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(wssSettingsPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(udpSettingsPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+        );
+        dispatchSettingsPanelLayout.setVerticalGroup(
+            dispatchSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(dispatchSettingsPanelLayout.createSequentialGroup()
+                .addComponent(wssSettingsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(udpSettingsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -362,7 +544,9 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
                 .addContainerGap()
                 .addComponent(loginPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(twitchConnectionPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(twitchConnectionPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 303, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(dispatchSettingsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -370,8 +554,11 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(loginPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 394, Short.MAX_VALUE)
-                    .addComponent(twitchConnectionPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 394, Short.MAX_VALUE))
+                    .addComponent(twitchConnectionPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 440, Short.MAX_VALUE)
+                    .addComponent(loginPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(dispatchSettingsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
         );
 
@@ -419,9 +606,6 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             AppSettings.accessToken = null;
             AppSettings.loggedInUser = null;
             
-            // Save configuration
-            AppSettings.persistData();
-            
             // Update UI
             updateLoginSettingsLayout();
             updateEventSubSettingsLayout();
@@ -447,11 +631,20 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     }//GEN-LAST:event_loginLogoutButtonActionPerformed
 
     private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
+        // Persist data
+        AppSettings.persistData();
+
         // Stop web server
-        webServerManager.stopWebServer();
+        webServerManager.stop();
         
         // Disconnect EvetSub
         eventSubManager.close();
+        
+        // Stop WebSocket dispatcher
+        wsDispatchManager.stop();
+        
+        // Stop UDP dispatcher
+        udpDispatchManager.stop();
     }//GEN-LAST:event_formWindowClosing
 
     private void scopeListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_scopeListValueChanged
@@ -548,6 +741,58 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         // Make the dialog visible
         dialog.setVisible(true);
     }//GEN-LAST:event_eventAddButtonActionPerformed
+
+    private void wsDispatchPortFieldKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_wsDispatchPortFieldKeyReleased
+        updateWsDispatchLayout();
+    }//GEN-LAST:event_wsDispatchPortFieldKeyReleased
+
+    private void wsStartStopButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_wsStartStopButtonActionPerformed
+        // WebSocket service is running
+        if (wsDispatchManager.isRunning()) {
+            wsDispatchManager.stop();
+        }
+        // WebSocket service is not running
+        else {
+            // Get port string
+            var port = Integer.parseInt(wsDispatchPortField.getText().trim());
+            
+            // Save port
+            AppSettings.webSocketPort = port;
+            
+            // Start WebSocket dispatcher
+            wsDispatchManager.start(port);
+        }
+    }//GEN-LAST:event_wsStartStopButtonActionPerformed
+
+    private void udpStartStopButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_udpStartStopButtonActionPerformed
+        // UDP service is running
+        if (udpDispatchManager.isRunning()) {
+            udpDispatchManager.stop();
+        }
+        // UDP service is not running
+        else {
+            // Get port strings
+            var portStrings = udpPortsField.getText().split(",");
+            
+            // New array for integer ports
+            var ports = new ArrayList<Integer>();
+            
+            // Parsing ports
+            for (String portString : portStrings) {
+                ports.add(Integer.valueOf(portString.trim()));
+            }
+            
+            // Save ports
+            AppSettings.udpPorts = ports;
+            
+            // Start UDP dispatcher
+            udpDispatchManager.start(ports);
+        }
+    }//GEN-LAST:event_udpStartStopButtonActionPerformed
+
+    private void udpPortsFieldKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_udpPortsFieldKeyReleased
+        updateUdpDispatchLayout();
+    }//GEN-LAST:event_udpPortsFieldKeyReleased
 
     /**
      * @param args the command line arguments
@@ -656,7 +901,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         // No user
         if (loggedInUser == null) {
             // Status label to red
-            accountStatusLabel.setForeground(new Color(255, 102, 102));
+            accountStatusLabel.setForeground(COLOR_TEXT_RED);
             accountStatusLabel.setText("No account");
             
             // Button to login and enable if application ID is filled out and
@@ -667,7 +912,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         // Has user
         else {
             // Status label to green
-            accountStatusLabel.setForeground(new java.awt.Color(102, 255, 102));
+            accountStatusLabel.setForeground(COLOR_TEXT_GREEN);
             accountStatusLabel.setText(loggedInUser.getDisplayName());
             
             // Button to logout
@@ -717,7 +962,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         // EventSub is connected
         if (eventSubConnected) {
             // Status label to green
-            eventsubConnectionStatusLabel.setForeground(new java.awt.Color(102, 255, 102));
+            eventsubConnectionStatusLabel.setForeground(COLOR_TEXT_GREEN);
             eventsubConnectionStatusLabel.setText("Connected");
             
             // Button to disconnect
@@ -726,18 +971,140 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         // EventSub is not connected
         else {
             // Status label to red
-            eventsubConnectionStatusLabel.setForeground(new Color(255, 102, 102));
+            eventsubConnectionStatusLabel.setForeground(COLOR_TEXT_RED);
             eventsubConnectionStatusLabel.setText("Disconnected");
             
             // Button to connect
             eventsubConnectButton.setText("Connect");
         }
     }
+    
+    private void initUdpDispatchLayout() {
+        
+        // ----- UDP port list field ----- //
+        
+        if (AppSettings.udpPorts != null) {
+            // Fill input field
+            udpPortsField.setText(StringUtils.join(AppSettings.udpPorts, ","));
+            
+            // Start service automatically if UDP ports are provided
+            udpDispatchManager.start(AppSettings.udpPorts);
+        }
+    }
+    
+    private void updateUdpDispatchLayout() {
+        // Get necessary data
+        var serviceRunning = udpDispatchManager.isRunning();
+        var udpPortsFieldText = udpPortsField.getText().trim();
+        var udpPortsFieldTextValid = udpPortsFieldText.matches(AppConstants.UDP_PORTS_LIST_REGEX);
+        
+        // ----- Port list layout ----- //
+        
+        // Enabled only if the service is not running
+        udpPortsField.setEnabled(!serviceRunning);
+        
+        // Tint port field based on it's content
+        if (udpPortsFieldTextValid) {
+            udpPortsField.setForeground(COLOR_TEXT_WHITE);
+        }
+        else {
+            udpPortsField.setForeground(COLOR_TEXT_RED);
+        }
+
+        // Service is running
+        if (serviceRunning) {
+            // Status label to green
+            udpStatusLabel.setForeground(COLOR_TEXT_GREEN);
+            udpStatusLabel.setText("Running");
+            
+            // Button to stop
+            udpStartStopButton.setText("Stop");
+            
+            // Disable port input
+            udpPortsField.setEnabled(false);
+        }
+        // EventSub is not connected
+        else {
+            // Status label to red
+            udpStatusLabel.setForeground(COLOR_TEXT_RED);
+            udpStatusLabel.setText("Not running");
+            
+            // Button to start
+            udpStartStopButton.setText("Start");
+            
+            // Enabled button if the ports are provided
+            udpStartStopButton.setEnabled(udpPortsFieldTextValid);
+            
+            // Enable port input
+            udpPortsField.setEnabled(true);
+        }
+    }
+    
+    private void initWsDispatchLayout() {
+        
+        // ----- Port field ----- //
+        
+        if (AppSettings.webSocketPort != null) {
+            // Fill input field
+            wsDispatchPortField.setText(String.valueOf(AppSettings.webSocketPort));
+            
+            // Start service automatically if port is provided
+            wsDispatchManager.start(AppSettings.webSocketPort);
+        }
+    }
+    
+    private void updateWsDispatchLayout() {
+        // Get necessary data
+        var serviceRunning = wsDispatchManager.isRunning();
+        var wsDispatchPortFieldText = wsDispatchPortField.getText().trim();
+        var wsDispatchPortFieldTextValid = wsDispatchPortFieldText.matches(AppConstants.WEBSOCKET_PORT_REGEX);
+        
+        // ----- Input layout ----- //
+        
+        // Enabled only if the service is not running
+        wsDispatchPortField.setEnabled(!serviceRunning);
+        
+        // Tint port field based on it's content
+        if (wsDispatchPortFieldTextValid) {
+            wsDispatchPortField.setForeground(COLOR_TEXT_WHITE);
+        }
+        else {
+            wsDispatchPortField.setForeground(COLOR_TEXT_RED);
+        }
+
+        // Service is running
+        if (serviceRunning) {
+            // Status label to green
+            wsDispatchStatusLabel.setForeground(COLOR_TEXT_GREEN);
+            wsDispatchStatusLabel.setText("Running");
+            
+            // Button to stop
+            wsStartStopButton.setText("Stop");
+            
+            // Disable port input
+            wsDispatchPortField.setEnabled(false);
+        }
+        // EventSub is not connected
+        else {
+            // Status label to red
+            wsDispatchStatusLabel.setForeground(COLOR_TEXT_RED);
+            wsDispatchStatusLabel.setText("Not running");
+            
+            // Button to start
+            wsStartStopButton.setText("Start");
+            
+            // Enabled button if the ports are provided
+            wsStartStopButton.setEnabled(wsDispatchPortFieldTextValid);
+            
+            // Enable port input
+            wsDispatchPortField.setEnabled(true);
+        }
+    }
 
     @Override
     public void onEventSubManagerConnecting(int step, Object... params) {
         // Set status label to blue
-        eventsubConnectionStatusLabel.setForeground(new java.awt.Color(102, 102, 255));
+        eventsubConnectionStatusLabel.setForeground(COLOR_TEXT_BLUE);
         
         // Set status label text
         var statusLabel = switch (step) {
@@ -782,9 +1149,6 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         // Set events data on successful connection
         AppSettings.events = SwingHelper.getItemsFromJList(eventList);
         
-        // Persist data
-        AppSettings.persistData();
-        
         // Update UI
         updateEventSubSettingsLayout();
     }
@@ -795,8 +1159,12 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     }
 
     @Override
-    public void onEventSubMessage(JSONObject message) {
-        System.out.println(message.toString());
+    public void onEventSubMessage(String message) {
+        // Send to WS dispatcher
+        wsDispatchManager.sendMessage(message);
+
+        // Send to UDP dispatcher
+        udpDispatchManager.sendMessage(message);
     }
 
     @Override
@@ -825,9 +1193,6 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
                 AppSettings.scopes = SwingHelper.getItemsFromJList(scopeList);
                 AppSettings.loggedInUser = user;
                 
-                // Save config
-                AppSettings.persistData();
-                
                 // Update UI
                 updateLoginSettingsLayout();
                 updateEventSubSettingsLayout();
@@ -835,6 +1200,36 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         });
     }
 
+    @Override
+    public void onUdpMessageSenderStarted() {
+        updateUdpDispatchLayout();
+    }
+
+    @Override
+    public void onUdpMessageSenderStopped() {
+        updateUdpDispatchLayout();
+    }
+
+    @Override
+    public void onWebSocketServerStarted() {
+        updateWsDispatchLayout();
+    }
+
+    @Override
+    public void onWebSocketServerStopped() {
+        updateWsDispatchLayout();
+    }
+
+    @Override
+    public void onWebSocketClientConnected(WebSocket ws) {
+        // Not really necessary to handle this
+    }
+
+    @Override
+    public void onWebSocketClientDisconnected(WebSocket ws) {
+        // We do nothing here
+    }
+    
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel accountPanel;
     private javax.swing.JLabel accountPanelLabel;
@@ -842,6 +1237,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     private javax.swing.JTextField applicationIdField;
     private javax.swing.JPanel applicationIdPanel;
     private javax.swing.JLabel applicationIdPanelLabel;
+    private javax.swing.JPanel dispatchSettingsPanel;
     private javax.swing.JButton eventAddButton;
     private javax.swing.JList<String> eventList;
     private javax.swing.JPanel eventListPanel;
@@ -852,6 +1248,8 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     private javax.swing.JPanel eventsubConnectionPanel;
     private javax.swing.JLabel eventsubConnectionStatusLabel;
     private javax.swing.JLabel eventsubConnectionStatusTitle;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
     private javax.swing.JButton loginLogoutButton;
     private javax.swing.JPanel loginPanel;
     private javax.swing.JList<String> scopeList;
@@ -861,5 +1259,15 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     private javax.swing.JButton scopeListRemoveButton;
     private javax.swing.JScrollPane scopeListScrollPane;
     private javax.swing.JPanel twitchConnectionPanel;
+    private javax.swing.JTextField udpPortsField;
+    private javax.swing.JPanel udpSettingsPanel;
+    private javax.swing.JButton udpStartStopButton;
+    private javax.swing.JLabel udpStatusLabel;
+    private javax.swing.JTextField wsDispatchPortField;
+    private javax.swing.JLabel wsDispatchStatusLabel;
+    private javax.swing.JButton wsStartStopButton;
+    private javax.swing.JLabel wssPortLabel;
+    private javax.swing.JPanel wssSettingsPanel;
+    private javax.swing.JLabel wssStatusLabel;
     // End of variables declaration//GEN-END:variables
 }

@@ -5,7 +5,7 @@
 package hu.mosomate.twitcheventhub.utils;
 
 import com.sun.net.httpserver.HttpExchange;
-import hu.mosomate.twitcheventhub.utils.webserver.WebServerManager;
+import hu.mosomate.twitcheventhub.utils.services.WebServerManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;

@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package hu.mosomate.twitcheventhub.utils.webserver;
+package hu.mosomate.twitcheventhub.utils.services;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -12,6 +12,8 @@ import hu.mosomate.twitcheventhub.utils.HttpHelper;
 import hu.mosomate.twitcheventhub.utils.oauth.OAuthLoginListener;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Manages the web server for OAuth redirect and static content serving.
@@ -20,12 +22,19 @@ import java.net.InetSocketAddress;
  */
 public class WebServerManager {
     
-    private HttpServer server;
-    private OAuthLoginListener oAuthLoginListener;
+    private static final Logger logger = Logger.getLogger(WebServerManager.class.getName());
     
-    public void startWebServer() {
+    private HttpServer server;
+    
+    private final OAuthLoginListener oAuthLoginListener;
+    
+    public WebServerManager(OAuthLoginListener listener) {
+        oAuthLoginListener = listener;
+    }
+    
+    public void start() {
         // Don't start again
-        if (isWebServerRunning()) {
+        if (isRunning()) {
             return;
         }
         
@@ -34,7 +43,7 @@ public class WebServerManager {
             // Create new web server
             server = HttpServer.create(new InetSocketAddress(8082), 0);
             
-            // Handler for access token
+            // Handler for OAuth access token
             server.createContext("/oauth_token", (HttpExchange he) -> {
                 // Get params from request
                 var postParams = HttpHelper.parsePostBody(he);
@@ -49,9 +58,7 @@ public class WebServerManager {
                 var accessToken = postParams.get("access_token");
                 
                 // Notify listener
-                if (oAuthLoginListener != null) {
-                    oAuthLoginListener.onOAuthLoginSuccess(accessToken);
-                }
+                oAuthLoginListener.onOAuthLoginSuccess(accessToken);
                 
                 // Respond success
                 HttpHelper.respondHtmlResourceFile(he, "oauth_token.html");
@@ -74,13 +81,13 @@ public class WebServerManager {
             server.start();
         }
         catch (IOException ex) {
-            ex.printStackTrace();
+            logger.log(Level.SEVERE, null, ex);
             server = null;
         }
     }
     
-    public void stopWebServer() {
-        if (!isWebServerRunning()) {
+    public void stop() {
+        if (!isRunning()) {
             return;
         }
         
@@ -88,11 +95,7 @@ public class WebServerManager {
         server = null;
     }
     
-    public boolean isWebServerRunning() {
+    public boolean isRunning() {
         return server != null;
-    }
-
-    public void setOAuthLoginListener(OAuthLoginListener oAuthLoginListener) {
-        this.oAuthLoginListener = oAuthLoginListener;
     }
 }
