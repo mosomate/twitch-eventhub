@@ -4,6 +4,10 @@
  */
 package hu.mosomate.twitcheventhub.ui;
 
+import javax.swing.JOptionPane;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 /**
  * This panel is shown as a modal dialog to manually dispatch message to
  * websocket an UDP clients.
@@ -106,7 +110,20 @@ public class MessageDispatcherPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_messageTextKeyReleased
 
     private void dispatchButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_dispatchButtonActionPerformed
-        callback.onPositiveButtonClicked(messageText.getText());
+        // Convert to JSON and back to string to remove unnecessary whitespaces
+        try {
+            var jsonMessage = new JSONObject(messageText.getText());
+            callback.onPositiveButtonClicked(jsonMessage.toString());
+        }
+        catch (JSONException ex) {
+            // Notify user if the message is not valid JSON
+            JOptionPane.showMessageDialog(
+                MessageDispatcherPanel.this,
+                "The message must be a valid JSON object!",
+                "Malformed message",
+                JOptionPane.ERROR_MESSAGE
+            );
+        }
     }//GEN-LAST:event_dispatchButtonActionPerformed
 
     private void updateComponents() {

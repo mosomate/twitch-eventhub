@@ -62,25 +62,39 @@ public class WebSocketDispatchManager {
             public void onOpen(WebSocket ws, ClientHandshake ch) {
                 // Send application ID, access token and user ID to client. This way
                 // they will be able to make API calls as well
-                if (AppSettings.applicationId != null &&
-                        AppSettings.accessToken != null &&
-                        AppSettings.loggedInUser != null
-                ) {
-                    try {
-                        // New JSON object
-                        var welcomeJson = new JSONObject();
+                try {
+                    // New JSON object
+                    var rootJson = new JSONObject();
 
-                        // Add properties
-                        welcomeJson.put("application_id", AppSettings.applicationId);
-                        welcomeJson.put("access_token", AppSettings.accessToken);
-                        welcomeJson.put("user_id", AppSettings.loggedInUser.getId());
+                    // Add metadata object
+                    var metaData = new JSONObject();
 
-                        // Send message
-                        ws.send(welcomeJson.toString());
-                    }
-                    catch(JSONException ex) {
-                        logger.log(Level.SEVERE, null, ex);
-                    }
+                    // Add properties
+                    metaData.put("application_id",
+                            AppSettings.applicationId != null ?
+                                    AppSettings.applicationId :
+                                    JSONObject.NULL
+                    );
+
+                    metaData.put("access_token", 
+                            AppSettings.accessToken != null ?
+                                    AppSettings.accessToken :
+                                    JSONObject.NULL
+                    );
+
+                    metaData.put("user_id",
+                            AppSettings.loggedInUser != null ?
+                                    AppSettings.loggedInUser.getId() :
+                                    JSONObject.NULL
+                    );
+
+                    rootJson.put("metadata", metaData);
+
+                    // Send message
+                    ws.send(rootJson.toString());
+                }
+                catch(JSONException ex) {
+                    logger.log(Level.SEVERE, null, ex);
                 }
 
                 listener.onWebSocketClientConnected(ws);
