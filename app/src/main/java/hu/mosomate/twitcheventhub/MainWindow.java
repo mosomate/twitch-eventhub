@@ -132,17 +132,22 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
         applicationIdField = new javax.swing.JTextField();
         dispatchSettingsPanel = new javax.swing.JPanel();
         wssSettingsPanel = new javax.swing.JPanel();
-        wssPortLabel = new javax.swing.JLabel();
-        wsDispatchPortField = new javax.swing.JTextField();
+        jPanel1 = new javax.swing.JPanel();
         wssStatusLabel = new javax.swing.JLabel();
         wsDispatchStatusLabel = new javax.swing.JLabel();
         wsStartStopButton = new javax.swing.JButton();
+        jPanel2 = new javax.swing.JPanel();
+        wssPortLabel = new javax.swing.JLabel();
+        wsDispatchPortField = new javax.swing.JTextField();
         udpSettingsPanel = new javax.swing.JPanel();
+        jPanel3 = new javax.swing.JPanel();
         jLabel2 = new javax.swing.JLabel();
         udpPortsField = new javax.swing.JTextField();
+        jPanel4 = new javax.swing.JPanel();
         jLabel3 = new javax.swing.JLabel();
         udpStatusLabel = new javax.swing.JLabel();
         udpStartStopButton = new javax.swing.JButton();
+        dispatchMessageButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Twitch Eventhub");
@@ -229,7 +234,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             .addGroup(eventListPanelLayout.createSequentialGroup()
                 .addComponent(eventListTitle)
                 .addGap(0, 0, Short.MAX_VALUE))
-            .addComponent(eventListScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 281, Short.MAX_VALUE)
+            .addComponent(eventListScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 279, Short.MAX_VALUE)
         );
         eventListPanelLayout.setVerticalGroup(
             eventListPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -345,7 +350,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             .addGroup(scopeListPanelLayout.createSequentialGroup()
                 .addComponent(scopeListPanelLabel)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(scopeListScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 229, Short.MAX_VALUE)
+                .addComponent(scopeListScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 242, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(scopeListPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(scopeListRemoveButton)
@@ -404,14 +409,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
 
         wssSettingsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Web socket server settings"));
 
-        wssPortLabel.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
-        wssPortLabel.setText("Port");
-
-        wsDispatchPortField.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyReleased(java.awt.event.KeyEvent evt) {
-                wsDispatchPortFieldKeyReleased(evt);
-            }
-        });
+        jPanel1.setPreferredSize(new java.awt.Dimension(200, 44));
 
         wssStatusLabel.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
         wssStatusLabel.setText("Status");
@@ -426,6 +424,55 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             }
         });
 
+        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
+        jPanel1.setLayout(jPanel1Layout);
+        jPanel1Layout.setHorizontalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addComponent(wssStatusLabel)
+                .addGap(0, 0, Short.MAX_VALUE))
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addComponent(wsDispatchStatusLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 54, Short.MAX_VALUE)
+                .addComponent(wsStartStopButton))
+        );
+        jPanel1Layout.setVerticalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addComponent(wssStatusLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(wsDispatchStatusLabel)
+                    .addComponent(wsStartStopButton)))
+        );
+
+        wssPortLabel.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
+        wssPortLabel.setText("Port");
+
+        wsDispatchPortField.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                wsDispatchPortFieldKeyReleased(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
+        jPanel2.setLayout(jPanel2Layout);
+        jPanel2Layout.setHorizontalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(wssPortLabel)
+                    .addComponent(wsDispatchPortField, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(0, 0, Short.MAX_VALUE))
+        );
+        jPanel2Layout.setVerticalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addComponent(wssPortLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(wsDispatchPortField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+        );
+
         javax.swing.GroupLayout wssSettingsPanelLayout = new javax.swing.GroupLayout(wssSettingsPanel);
         wssSettingsPanel.setLayout(wssSettingsPanelLayout);
         wssSettingsPanelLayout.setHorizontalGroup(
@@ -433,35 +480,22 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             .addGroup(wssSettingsPanelLayout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(wssSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(wssSettingsPanelLayout.createSequentialGroup()
-                        .addComponent(wsDispatchStatusLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 62, Short.MAX_VALUE)
-                        .addComponent(wsStartStopButton))
-                    .addGroup(wssSettingsPanelLayout.createSequentialGroup()
-                        .addGroup(wssSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(wsDispatchPortField, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(wssPortLabel)
-                            .addComponent(wssStatusLabel))
-                        .addGap(0, 0, Short.MAX_VALUE)))
+                    .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap())
         );
         wssSettingsPanelLayout.setVerticalGroup(
             wssSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(wssSettingsPanelLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(wssPortLabel)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(wsDispatchPortField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(wssStatusLabel)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(wssSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(wsDispatchStatusLabel)
-                    .addComponent(wsStartStopButton))
+                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         udpSettingsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("UDP sender settings"));
+        udpSettingsPanel.setPreferredSize(new java.awt.Dimension(200, 137));
 
         jLabel2.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
         jLabel2.setText("Ports");
@@ -471,6 +505,23 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
                 udpPortsFieldKeyReleased(evt);
             }
         });
+
+        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
+        jPanel3.setLayout(jPanel3Layout);
+        jPanel3Layout.setHorizontalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addComponent(jLabel2)
+                .addGap(0, 0, Short.MAX_VALUE))
+            .addComponent(udpPortsField)
+        );
+        jPanel3Layout.setVerticalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addComponent(jLabel2)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(udpPortsField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+        );
 
         jLabel3.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
         jLabel3.setText("Status");
@@ -485,6 +536,28 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             }
         });
 
+        javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
+        jPanel4.setLayout(jPanel4Layout);
+        jPanel4Layout.setHorizontalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addComponent(jLabel3)
+                .addGap(0, 0, Short.MAX_VALUE))
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addComponent(udpStatusLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 54, Short.MAX_VALUE)
+                .addComponent(udpStartStopButton))
+        );
+        jPanel4Layout.setVerticalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addComponent(jLabel3)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(udpStatusLabel)
+                    .addComponent(udpStartStopButton)))
+        );
+
         javax.swing.GroupLayout udpSettingsPanelLayout = new javax.swing.GroupLayout(udpSettingsPanel);
         udpSettingsPanel.setLayout(udpSettingsPanelLayout);
         udpSettingsPanelLayout.setHorizontalGroup(
@@ -492,40 +565,39 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             .addGroup(udpSettingsPanelLayout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(udpSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(udpPortsField)
-                    .addGroup(udpSettingsPanelLayout.createSequentialGroup()
-                        .addGroup(udpSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel2)
-                            .addComponent(jLabel3))
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addGroup(udpSettingsPanelLayout.createSequentialGroup()
-                        .addComponent(udpStatusLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(udpStartStopButton)))
+                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
         udpSettingsPanelLayout.setVerticalGroup(
             udpSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(udpSettingsPanelLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jLabel2)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(udpPortsField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jLabel3)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(udpSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(udpStatusLabel)
-                    .addComponent(udpStartStopButton))
+                .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
+
+        dispatchMessageButton.setText("Dispatch message");
+        dispatchMessageButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                dispatchMessageButtonActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout dispatchSettingsPanelLayout = new javax.swing.GroupLayout(dispatchSettingsPanel);
         dispatchSettingsPanel.setLayout(dispatchSettingsPanelLayout);
         dispatchSettingsPanelLayout.setHorizontalGroup(
             dispatchSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(wssSettingsPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addComponent(udpSettingsPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addGroup(dispatchSettingsPanelLayout.createSequentialGroup()
+                .addComponent(udpSettingsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, 222, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 0, Short.MAX_VALUE))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, dispatchSettingsPanelLayout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(dispatchMessageButton)
+                .addContainerGap())
         );
         dispatchSettingsPanelLayout.setVerticalGroup(
             dispatchSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -533,6 +605,8 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
                 .addComponent(wssSettingsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(udpSettingsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(dispatchMessageButton)
                 .addContainerGap())
         );
 
@@ -544,7 +618,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
                 .addContainerGap()
                 .addComponent(loginPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(twitchConnectionPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 303, Short.MAX_VALUE)
+                .addComponent(twitchConnectionPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 301, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(dispatchSettingsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
@@ -554,11 +628,9 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(twitchConnectionPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 440, Short.MAX_VALUE)
+                    .addComponent(twitchConnectionPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 453, Short.MAX_VALUE)
                     .addComponent(loginPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(dispatchSettingsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(0, 0, Short.MAX_VALUE)))
+                    .addComponent(dispatchSettingsPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
 
@@ -793,6 +865,10 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     private void udpPortsFieldKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_udpPortsFieldKeyReleased
         updateUdpDispatchLayout();
     }//GEN-LAST:event_udpPortsFieldKeyReleased
+
+    private void dispatchMessageButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_dispatchMessageButtonActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_dispatchMessageButtonActionPerformed
 
     /**
      * @param args the command line arguments
@@ -1237,6 +1313,7 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     private javax.swing.JTextField applicationIdField;
     private javax.swing.JPanel applicationIdPanel;
     private javax.swing.JLabel applicationIdPanelLabel;
+    private javax.swing.JButton dispatchMessageButton;
     private javax.swing.JPanel dispatchSettingsPanel;
     private javax.swing.JButton eventAddButton;
     private javax.swing.JList<String> eventList;
@@ -1250,6 +1327,10 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     private javax.swing.JLabel eventsubConnectionStatusTitle;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel2;
+    private javax.swing.JPanel jPanel3;
+    private javax.swing.JPanel jPanel4;
     private javax.swing.JButton loginLogoutButton;
     private javax.swing.JPanel loginPanel;
     private javax.swing.JList<String> scopeList;

@@ -9,6 +9,7 @@ import java.net.InetSocketAddress;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.java_websocket.WebSocket;
+import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 import org.json.JSONException;
@@ -61,20 +62,25 @@ public class WebSocketDispatchManager {
             public void onOpen(WebSocket ws, ClientHandshake ch) {
                 // Send application ID, access token and user ID to client. This way
                 // they will be able to make API calls as well
-                try {
-                    // New JSON object
-                    var welcomeJson = new JSONObject();
+                if (AppSettings.applicationId != null &&
+                        AppSettings.accessToken != null &&
+                        AppSettings.loggedInUser != null
+                ) {
+                    try {
+                        // New JSON object
+                        var welcomeJson = new JSONObject();
 
-                    // Add properties
-                    welcomeJson.put("application_id", AppSettings.applicationId);
-                    welcomeJson.put("access_token", AppSettings.accessToken);
-                    welcomeJson.put("user_id", AppSettings.loggedInUser.getId());
+                        // Add properties
+                        welcomeJson.put("application_id", AppSettings.applicationId);
+                        welcomeJson.put("access_token", AppSettings.accessToken);
+                        welcomeJson.put("user_id", AppSettings.loggedInUser.getId());
 
-                    // Send message
-                    ws.send(welcomeJson.toString());
-                }
-                catch(JSONException ex) {
-                    logger.log(Level.SEVERE, null, ex);
+                        // Send message
+                        ws.send(welcomeJson.toString());
+                    }
+                    catch(JSONException ex) {
+                        logger.log(Level.SEVERE, null, ex);
+                    }
                 }
 
                 listener.onWebSocketClientConnected(ws);
@@ -102,6 +108,7 @@ public class WebSocketDispatchManager {
             }
         };
         
+        server.setReuseAddr(true);
         server.start();
     }
 
