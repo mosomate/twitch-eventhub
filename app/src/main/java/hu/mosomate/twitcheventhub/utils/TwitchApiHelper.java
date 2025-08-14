@@ -327,6 +327,20 @@ public class TwitchApiHelper {
     }
     
     /**
+     * Converts a regular MD5 hash to Twitch ID format.
+     * 
+     * @param md5 has to converted
+     * @return Twitch ID formatted hash
+     */
+    public static String Md5StringToId(String md5) {
+        return md5.substring(0, 8) + "-" +
+                md5.substring(8, 12) + "-" +
+                md5.substring(12, 16) + "-" +
+                md5.substring(16, 20) + "-" +
+                md5.substring(20, 32);
+    }
+    
+    /**
      * A simple interface to be called after event subscription request.
      */
     public interface EventSubscriptionRequestListener {

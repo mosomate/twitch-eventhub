@@ -5,11 +5,14 @@
 package hu.mosomate.twitcheventhub.utils.services;
 
 import hu.mosomate.twitcheventhub.AppSettings;
+import hu.mosomate.twitcheventhub.utils.TwitchApiHelper;
 import java.net.InetSocketAddress;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.java_websocket.WebSocket;
-import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 import org.json.JSONException;
@@ -66,29 +69,52 @@ public class WebSocketDispatchManager {
                     // New JSON object
                     var rootJson = new JSONObject();
 
-                    // Add metadata object
-                    var metaData = new JSONObject();
+                    // ----- Add metadata object ----- //
+                    
+                    var metaDataJson = new JSONObject();
+                    
+                    // Get ISO formatted current time
+                    var isoNow = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
+                    
+                    // Message ID is the MD5 hash of this time
+                    metaDataJson.put(
+                            "message_id",
+                            TwitchApiHelper.Md5StringToId(DigestUtils.md5Hex(isoNow))
+                    );
+                    
+                    // Message type
+                    metaDataJson.put("message_type", "eventhub_welcome");
+                    
+                    // Message timestamp
+                    metaDataJson.put("message_timestamp", isoNow);
+                    
+                    // Add metadata to root
+                    rootJson.put("metadata", metaDataJson);
+                    
+                    // ----- Add payload ----- //
+                    
+                    var payloadJson = new JSONObject();
 
                     // Add properties
-                    metaData.put("application_id",
+                    payloadJson.put("application_id",
                             AppSettings.applicationId != null ?
                                     AppSettings.applicationId :
                                     JSONObject.NULL
                     );
 
-                    metaData.put("access_token", 
+                    payloadJson.put("access_token", 
                             AppSettings.accessToken != null ?
                                     AppSettings.accessToken :
                                     JSONObject.NULL
                     );
 
-                    metaData.put("user_id",
+                    payloadJson.put("user_id",
                             AppSettings.loggedInUser != null ?
                                     AppSettings.loggedInUser.getId() :
                                     JSONObject.NULL
                     );
 
-                    rootJson.put("metadata", metaData);
+                    rootJson.put("payload", payloadJson);
 
                     // Send message
                     ws.send(rootJson.toString());
