@@ -7,6 +7,7 @@ package hu.mosomate.twitcheventhub;
 import com.formdev.flatlaf.FlatDarkLaf;
 import hu.mosomate.twitcheventhub.ui.AddEventPanel;
 import hu.mosomate.twitcheventhub.ui.AddScopePanel;
+import hu.mosomate.twitcheventhub.ui.MessageDispatcherPanel;
 import hu.mosomate.twitcheventhub.utils.SwingHelper;
 import hu.mosomate.twitcheventhub.utils.TwitchApiHelper;
 import hu.mosomate.twitcheventhub.utils.TwitchUser;
@@ -867,7 +868,29 @@ public class MainWindow extends javax.swing.JFrame implements EventSubManagerLis
     }//GEN-LAST:event_udpPortsFieldKeyReleased
 
     private void dispatchMessageButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_dispatchMessageButtonActionPerformed
-        // TODO add your handling code here:
+        var dialog = new JDialog();
+        dialog.setTitle("Dispatch message");
+        dialog.setModal(true); // This makes the dialog block the parent frame
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        
+        // Add the JPanel to the JDialog
+        var panel = new MessageDispatcherPanel((Object... data) -> {
+            // Dispatch message
+            onEventSubMessage((String) data[0]);
+            
+            // Close dialog
+            dialog.setVisible(false);
+        });
+        dialog.add(panel);
+        
+        // Set the size and position
+        dialog.pack();
+        dialog.setLocationRelativeTo(this); // Center the dialog on the screen
+        dialog.setResizable(false);
+        dialog.getRootPane().setDefaultButton(panel.getPositiveButton());
+        
+        // Make the dialog visible
+        dialog.setVisible(true);
     }//GEN-LAST:event_dispatchMessageButtonActionPerformed
 
     /**

@@ -130,10 +130,6 @@ public class AddScopePanel extends javax.swing.JPanel {
     }//GEN-LAST:event_nameFieldKeyReleased
 
     private void addButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addButtonActionPerformed
-        if (callback == null) {
-            return;
-        }
-
         // Pass new scope to callback
         callback.onPositiveButtonClicked(nameField.getText().trim());
     }//GEN-LAST:event_addButtonActionPerformed

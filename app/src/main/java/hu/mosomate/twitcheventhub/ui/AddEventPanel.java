@@ -239,10 +239,6 @@ public class AddEventPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_uiCheckBoxStateChanged
 
     private void addButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addButtonActionPerformed
-        if (callback == null) {
-            return;
-        }
-
         // Get all data from inputs
         var name = nameTextField.getText().trim();
         var version = versionComboBox.getSelectedItem().toString();
